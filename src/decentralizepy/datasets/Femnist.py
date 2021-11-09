@@ -7,6 +7,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+from decentralizepy.datasets.Data import Data
 from decentralizepy.datasets.Dataset import Dataset
 from decentralizepy.datasets.Partitioner import DataPartitioner
 
@@ -45,41 +46,41 @@ def __read_dir__(data_dir):
     return clients, num_samples, data
 
 
-class Femnist:
+class Femnist(Dataset):
     """
     Class for the FEMNIST dataset
     """
 
-    def __init__(self, train_dir=None, test_dir=None, rank=0, n_procs=1, sizes=None):
+    def __init__(self, rank='', n_procs='', train_dir='', test_dir='', sizes=''):
         """
         Constructor which reads the data files, instantiates and partitions the dataset
         Parameters
         ----------
+        rank : int, optional
+            Rank of the current process (to get the partition). Default value is assigned 0
+        n_procs : int, optional
+            The number of processes among which to divide the data. Default value is assigned 1
         train_dir : str, optional
             Path to the training data files. Required to instantiate the training set
             The training set is partitioned according to n_procs and sizes
         test_dir : str. optional
             Path to the testing data files Required to instantiate the testing set
-        rank : int, optional
-            Rank of the current process (to get the partition). Default value is 0
-        n_procs : int, optional
-            The number of processes among which to divide the data
         sizes : list(int), optional
-            A list of fractions specifying how much data to alot each process.
+            A list of fractions specifying how much data to alot each process. Sum of fractions should be 1.0
             By default, each process gets an equal amount.
         """
-        if train_dir:
-            self.__training__ = True
+        super().__init__(rank, n_procs, train_dir, test_dir, sizes)
+        if self.__training__:
             clients, num_samples, train_data = __read_dir__(train_dir)
             c_len = len(self.clients)
 
             if sizes == None:  # Equal distribution of data among processes
-                e = c_len // n_procs
+                e = c_len // self.n_procs
                 frac = e / c_len
-                sizes = [frac] * n_procs
-                sizes[-1] += 1.0 - frac * n_procs
+                sizes = [frac] * self.n_procs
+                sizes[-1] += 1.0 - frac * self.n_procs
 
-            my_clients = DataPartitioner(clients, sizes).use(rank)
+            my_clients = DataPartitioner(clients, sizes).use(self.rank)
             my_train_data = []
             self.clients = []
             self.num_samples = []
@@ -96,8 +97,7 @@ class Femnist:
                 my_train_data["y"], dtype=np.dtype("float64")
             ).reshape(-1, 1)
 
-        if test_dir:
-            self.__testing__ = True
+        if self.__testing__:
             _, _, test_data = __read_dir__(test_dir)
             test_data = test_data.values()
             self.test_x = np.array(test_data["x"], dtype=np.dtype("float64")).reshape(
@@ -154,7 +154,7 @@ class Femnist:
             If the training set was not initialized
         """
         if self.__training__:
-            return Dataset(self.train_x, self.train_y)
+            return Data(self.train_x, self.train_y)
         raise RuntimeError("Training set not initialized!")
 
     def get_testset(self):
@@ -169,7 +169,7 @@ class Femnist:
             If the test set was not initialized
         """
         if self.__testing__:
-            return Dataset(self.test_x, self.test_y)
+            return Data(self.test_x, self.test_y)
         raise RuntimeError("Test set not initialized!")
 
 

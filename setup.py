@@ -1,4 +1,4 @@
-#!$CONDA_PREFIX/bin/env python
+#!$CONDA_PREFIX/python
 from setuptools import setup
 
 # https://packaging.python.org/guides/single-sourcing-package-version/
