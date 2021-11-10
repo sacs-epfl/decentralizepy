@@ -1,9 +1,4 @@
-def __conditional_value__(var, nul, default):
-    if var != nul:
-        return var
-    else:
-        return default
-
+from decentralizepy import utils
 
 class Dataset:
     """
@@ -11,7 +6,7 @@ class Dataset:
     All datasets must follow this API.
     """
 
-    def __init__(self, rank='', n_procs='', train_dir='', test_dir='', sizes=''):
+    def __init__(self, rank="", n_procs="", train_dir="", test_dir="", sizes=""):
         """
         Constructor which reads the data files, instantiates and partitions the dataset
         Parameters
@@ -29,11 +24,11 @@ class Dataset:
             A list of fractions specifying how much data to alot each process. Sum of fractions should be 1.0
             By default, each process gets an equal amount.
         """
-        self.rank = __conditional_value__(rank, '', 0)
-        self.n_procs = __conditional_value__(n_procs, '', 1)
-        self.train_dir = __conditional_value__(train_dir, '', None)
-        self.test_dir = __conditional_value__(test_dir, '', None)
-        self.sizes = __conditional_value__(sizes, '', None)
+        self.rank = utils.conditional_value(rank, "", 0)
+        self.n_procs = utils.conditional_value(n_procs, "", 1)
+        self.train_dir = utils.conditional_value(train_dir, "", None)
+        self.test_dir = utils.conditional_value(test_dir, "", None)
+        self.sizes = utils.conditional_value(sizes, "", None)
         if self.sizes:
             if type(self.sizes) == str:
                 self.sizes = eval(self.sizes)

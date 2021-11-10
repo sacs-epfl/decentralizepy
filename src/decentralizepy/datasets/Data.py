@@ -16,7 +16,7 @@ class Data:
         self.x = x
         self.y = y
 
-    def __get_item__(self, i):
+    def __getitem__(self, i):
         """
         Function to get the item with index i.
         Parameters

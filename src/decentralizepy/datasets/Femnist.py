@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from collections import defaultdict
 
@@ -16,42 +17,41 @@ IMAGE_SIZE = (28, 28)
 FLAT_SIZE = 28 * 28
 
 
-def __read_dir__(data_dir):
-    """
-    Function to read all the FEMNIST data files in the directory
-    Parameters
-    ----------
-    data_dir : str
-        Path to the folder containing the data files
-    Returns
-    -------
-    3-tuple
-        A tuple containing list of clients, number of samples per client,
-        and the data items per client
-    """
-    clients = []
-    num_samples = []
-    data = defaultdict(lambda: None)
-
-    files = os.listdir(data_dir)
-    files = [f for f in files if f.endswith(".json")]
-    for f in files:
-        file_path = os.path.join(data_dir, f)
-        with open(file_path, "r") as inf:
-            client_data = json.load(inf)
-        clients.extend(client_data["users"])
-        num_samples.extend(client_data["num_samples"])
-        data.update(client_data["user_data"])
-
-    return clients, num_samples, data
-
-
 class Femnist(Dataset):
     """
     Class for the FEMNIST dataset
     """
 
-    def __init__(self, rank='', n_procs='', train_dir='', test_dir='', sizes=''):
+    def __read_dir__(self, data_dir):
+        """
+        Function to read all the FEMNIST data files in the directory
+        Parameters
+        ----------
+        data_dir : str
+            Path to the folder containing the data files
+        Returns
+        -------
+        3-tuple
+            A tuple containing list of clients, number of samples per client,
+            and the data items per client
+        """
+        clients = []
+        num_samples = []
+        data = defaultdict(lambda: None)
+
+        files = os.listdir(data_dir)
+        files = [f for f in files if f.endswith(".json")]
+        for f in files:
+            file_path = os.path.join(data_dir, f)
+            with open(file_path, "r") as inf:
+                client_data = json.load(inf)
+            clients.extend(client_data["users"])
+            num_samples.extend(client_data["num_samples"])
+            data.update(client_data["user_data"])
+
+        return clients, num_samples, data
+
+    def __init__(self, rank, n_procs="", train_dir="", test_dir="", sizes=""):
         """
         Constructor which reads the data files, instantiates and partitions the dataset
         Parameters
@@ -70,42 +70,56 @@ class Femnist(Dataset):
             By default, each process gets an equal amount.
         """
         super().__init__(rank, n_procs, train_dir, test_dir, sizes)
-        if self.__training__:
-            clients, num_samples, train_data = __read_dir__(train_dir)
-            c_len = len(self.clients)
 
-            if sizes == None:  # Equal distribution of data among processes
+        if self.__training__:
+            logging.info("Loading training set.")
+            clients, num_samples, train_data = self.__read_dir__(self.train_dir)
+            c_len = len(clients)
+
+            if self.sizes == None:  # Equal distribution of data among processes
                 e = c_len // self.n_procs
                 frac = e / c_len
-                sizes = [frac] * self.n_procs
-                sizes[-1] += 1.0 - frac * self.n_procs
+                self.sizes = [frac] * self.n_procs
+                self.sizes[-1] += 1.0 - frac * self.n_procs
+                print(self.sizes)
 
-            my_clients = DataPartitioner(clients, sizes).use(self.rank)
-            my_train_data = []
+            my_clients = DataPartitioner(clients, self.sizes).use(self.rank)
+            my_train_data = {"x": [], "y": []}
             self.clients = []
             self.num_samples = []
+            logging.debug("Clients Length: %d", c_len)
+            logging.debug("My_clients_len: %d", my_clients.__len__())
             for i in range(my_clients.__len__()):
-                cur_client = my_clients.__get_item__(i)
+                cur_client = my_clients.__getitem__(i)
                 self.clients.append(cur_client)
-                my_train_data.extend(train_data[cur_client])
+                my_train_data["x"].extend(train_data[cur_client]["x"])
+                my_train_data["y"].extend(train_data[cur_client]["y"])
                 self.num_samples.append(len(train_data[cur_client]["y"]))
-
-            self.train_x = np.array(
-                my_train_data["x"], dtype=np.dtype("float64")
-            ).reshape(-1, 28, 28, 1)
+            self.train_x = (
+                np.array(my_train_data["x"], dtype=np.dtype("float64"))
+                .reshape(-1, 28, 28, 1)
+                .transpose(0, 3, 1, 2)
+            )
             self.train_y = np.array(
                 my_train_data["y"], dtype=np.dtype("float64")
             ).reshape(-1, 1)
+            logging.debug("train_x.shape: %s", str(self.train_x.shape))
+            logging.debug("train_y.shape: %s", str(self.train_y.shape))
 
         if self.__testing__:
-            _, _, test_data = __read_dir__(test_dir)
+            logging.info("Loading training set.")
+            _, _, test_data = self.__read_dir__(self.test_dir)
             test_data = test_data.values()
-            self.test_x = np.array(test_data["x"], dtype=np.dtype("float64")).reshape(
-                -1, 28, 28, 1
+            self.test_x = (
+                np.array(test_data["x"], dtype=np.dtype("float64"))
+                .reshape(-1, 28, 28, 1)
+                .transpose(0, 3, 1, 2)
             )
             self.test_y = np.array(test_data["y"], dtype=np.dtype("float64")).reshape(
                 -1, 1
             )
+            logging.debug("test_x.shape: %s", str(self.test_x.shape))
+            logging.debug("test_y.shape: %s", str(self.test_y.shape))
 
         # TODO: Add Validation
 
