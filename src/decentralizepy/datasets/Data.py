@@ -16,6 +16,9 @@ class Data:
         self.x = x
         self.y = y
 
+    def __len__(self):
+        return self.y.shape[0]
+
     def __getitem__(self, i):
         """
         Function to get the item with index i.

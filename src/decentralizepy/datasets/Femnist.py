@@ -7,6 +7,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import nn
+from torch.utils.data import DataLoader
 
 from decentralizepy.datasets.Data import Data
 from decentralizepy.datasets.Dataset import Dataset
@@ -15,6 +16,7 @@ from decentralizepy.datasets.Partitioner import DataPartitioner
 NUM_CLASSES = 62
 IMAGE_SIZE = (28, 28)
 FLAT_SIZE = 28 * 28
+PIXEL_RANGE = 256.0
 
 
 class Femnist(Dataset):
@@ -81,7 +83,7 @@ class Femnist(Dataset):
                 frac = e / c_len
                 self.sizes = [frac] * self.n_procs
                 self.sizes[-1] += 1.0 - frac * self.n_procs
-                print(self.sizes)
+                logging.debug("Size fractions: {}".format(sizes))
 
             my_clients = DataPartitioner(clients, self.sizes).use(self.rank)
             my_train_data = {"x": [], "y": []}
@@ -96,13 +98,13 @@ class Femnist(Dataset):
                 my_train_data["y"].extend(train_data[cur_client]["y"])
                 self.num_samples.append(len(train_data[cur_client]["y"]))
             self.train_x = (
-                np.array(my_train_data["x"], dtype=np.dtype("float64"))
+                np.array(my_train_data["x"], dtype=np.dtype("float32"))
                 .reshape(-1, 28, 28, 1)
                 .transpose(0, 3, 1, 2)
             )
             self.train_y = np.array(
-                my_train_data["y"], dtype=np.dtype("float64")
-            ).reshape(-1, 1)
+                my_train_data["y"], dtype=np.dtype("int64")
+            ).reshape(-1)
             logging.debug("train_x.shape: %s", str(self.train_x.shape))
             logging.debug("train_y.shape: %s", str(self.train_y.shape))
 
@@ -111,12 +113,12 @@ class Femnist(Dataset):
             _, _, test_data = self.__read_dir__(self.test_dir)
             test_data = test_data.values()
             self.test_x = (
-                np.array(test_data["x"], dtype=np.dtype("float64"))
+                np.array(test_data["x"], dtype=np.dtype("float32"))
                 .reshape(-1, 28, 28, 1)
                 .transpose(0, 3, 1, 2)
             )
-            self.test_y = np.array(test_data["y"], dtype=np.dtype("float64")).reshape(
-                -1, 1
+            self.test_y = np.array(test_data["y"], dtype=np.dtype("int64")).reshape(
+                -1
             )
             logging.debug("test_x.shape: %s", str(self.test_x.shape))
             logging.debug("test_y.shape: %s", str(self.test_y.shape))
@@ -156,19 +158,23 @@ class Femnist(Dataset):
 
         raise IndexError("i is out of bounds!")
 
-    def get_trainset(self):
+    def get_trainset(self, batch_size, shuffle = False):
         """
         Function to get the training set
+        Parameters
+        ----------
+        batch_size : int
+            Batch size for learning
         Returns
         -------
-        Dataset
+        torch.utils.Dataset(decentralizepy.datasets.Data)
         Raises
         ------
         RuntimeError
             If the training set was not initialized
         """
         if self.__training__:
-            return Data(self.train_x, self.train_y)
+            return DataLoader(Data(self.train_x, self.train_y), batch_size = batch_size, shuffle = shuffle)
         raise RuntimeError("Training set not initialized!")
 
     def get_testset(self):
@@ -176,7 +182,7 @@ class Femnist(Dataset):
         Function to get the test set
         Returns
         -------
-        Dataset
+        torch.utils.Dataset(decentralizepy.datasets.Data)
         Raises
         ------
         RuntimeError

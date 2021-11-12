@@ -17,6 +17,7 @@ class Node:
     def __init__(
         self,
         rank: int,
+        machine_id: int,
         mapping: Mapping,
         graph: Graph,
         config,
@@ -31,6 +32,8 @@ class Node:
         ----------
         rank : int
             Rank of process local to the machine
+        machine_id : int
+            Machine ID on which the process in running
         n_procs_local : int
             Number of processes on current machine
         mapping : decentralizepy.mappings
@@ -59,7 +62,6 @@ class Node:
             Other arguments
         """
         log_file = os.path.join(log_dir, str(rank) + ".log")
-        print(log_file)
         logging.basicConfig(
             filename=log_file,
             format="[%(asctime)s][%(module)s][%(levelname)s] %(message)s",
@@ -77,29 +79,33 @@ class Node:
         logging.debug("type(graph): %s", str(type(self.rank)))
         logging.debug("type(mapping): %s", str(type(self.mapping)))
         
-        dataset_configs = dict(config.items("DATASET"))
+        dataset_configs = config["DATASET"]
         dataset_module = importlib.import_module(dataset_configs["dataset_package"])
         dataset_class = getattr(dataset_module, dataset_configs["dataset_class"])
         dataset_params = utils.remove_keys(dataset_configs, ["dataset_package", "dataset_class", "model_class"])
         self.dataset =  dataset_class(rank, **dataset_params)
-        self.trainset = self.dataset.get_trainset()
 
         logging.info("Dataset instantiation complete.")
 
         model_class = getattr(dataset_module, dataset_configs["model_class"])
         self.model = model_class()
 
-        optimizer_configs = dict(config.items("OPTIMIZER_PARAMS"))
+        optimizer_configs = config["OPTIMIZER_PARAMS"]
         optimizer_module = importlib.import_module(optimizer_configs["optimizer_package"])
         optimizer_class = getattr(optimizer_module, optimizer_configs["optimizer_class"])
         optimizer_params = utils.remove_keys(optimizer_configs, ["optimizer_package", "optimizer_class"])
         self.optimizer = optimizer_class(self.model.parameters(), **optimizer_params)
 
-        train_configs = dict(config.items("TRAIN_PARAMS"))
+        train_configs = config["TRAIN_PARAMS"]
         train_module = importlib.import_module(train_configs["training_package"])
         train_class = getattr(train_module, train_configs["training_class"])
-        train_params = utils.remove_keys(train_configs, ["training_package", "training_class"])
-        self.trainer = train_class(self.model, self.optimizer, **train_params)
+
+        loss_package = importlib.import_module(train_configs["loss_package"])
+        loss = getattr(loss_package, train_configs["loss"])
+
+        train_params = utils.remove_keys(train_configs, ["training_package", "training_class", "loss", "loss_package"])
+        self.trainer = train_class(self.model, self.optimizer, loss, **train_params)
 
         for iteration in range(iterations):
-            self.trainer.train(self.trainset)
+            logging.info("Starting training iteration: %d", iteration)
+            self.trainer.train(self.dataset)

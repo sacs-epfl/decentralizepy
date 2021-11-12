@@ -49,7 +49,7 @@ class Dataset:
         Function to get the training set
         Returns
         -------
-        Dataset
+        torch.utils.Dataset(decentralizepy.datasets.Data)
         Raises
         ------
         RuntimeError
@@ -62,7 +62,7 @@ class Dataset:
         Function to get the test set
         Returns
         -------
-        Dataset
+        torch.utils.Dataset(decentralizepy.datasets.Data)
         Raises
         ------
         RuntimeError
