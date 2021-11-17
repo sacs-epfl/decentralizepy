@@ -6,7 +6,8 @@ from decentralizepy.mappings.Linear import Linear
 
 def f(rank, m_id, total_procs, filePath, mapping):
     c = Communication(rank, m_id, total_procs, filePath, mapping)
-    c.connect_neighbours([i for i in range(total_procs) if i != rank])
+
+    c.connect_neighbours([i for i in range(total_procs) if i != mapping.get_uid(rank, m_id)])
     send = {}
     send["message"] = "Hi I am rank {}".format(rank)
     c.send((rank + 1) % total_procs, send)
