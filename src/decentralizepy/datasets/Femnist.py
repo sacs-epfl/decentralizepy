@@ -3,10 +3,13 @@ import logging
 import os
 from collections import defaultdict
 
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn.functional as F
+import torchvision
 from torch import nn
+from torch._C import ParameterDict
 from torch.utils.data import DataLoader
 
 from decentralizepy.datasets.Data import Data
@@ -109,17 +112,21 @@ class Femnist(Dataset):
             logging.debug("train_y.shape: %s", str(self.train_y.shape))
 
         if self.__testing__:
-            logging.info("Loading training set.")
+            logging.info("Loading testing set.")
             _, _, test_data = self.__read_dir__(self.test_dir)
-            test_data = test_data.values()
+            test_x = []
+            test_y = []
+            for test_data in test_data.values():
+                for x in test_data["x"]:
+                    test_x.append(x)
+                for y in test_data["y"]:
+                    test_y.append(y)
             self.test_x = (
-                np.array(test_data["x"], dtype=np.dtype("float32"))
+                np.array(test_x, dtype=np.dtype("float32"))
                 .reshape(-1, 28, 28, 1)
                 .transpose(0, 3, 1, 2)
             )
-            self.test_y = np.array(test_data["y"], dtype=np.dtype("int64")).reshape(
-                -1
-            )
+            self.test_y = np.array(test_y, dtype=np.dtype("int64")).reshape(-1)
             logging.debug("test_x.shape: %s", str(self.test_x.shape))
             logging.debug("test_y.shape: %s", str(self.test_y.shape))
 
@@ -158,12 +165,12 @@ class Femnist(Dataset):
 
         raise IndexError("i is out of bounds!")
 
-    def get_trainset(self, batch_size, shuffle = False):
+    def get_trainset(self, batch_size=1, shuffle=False):
         """
         Function to get the training set
         Parameters
         ----------
-        batch_size : int
+        batch_size : int, optional
             Batch size for learning
         Returns
         -------
@@ -174,7 +181,9 @@ class Femnist(Dataset):
             If the training set was not initialized
         """
         if self.__training__:
-            return DataLoader(Data(self.train_x, self.train_y), batch_size = batch_size, shuffle = shuffle)
+            return DataLoader(
+                Data(self.train_x, self.train_y), batch_size=batch_size, shuffle=shuffle
+            )
         raise RuntimeError("Training set not initialized!")
 
     def get_testset(self):
@@ -189,8 +198,42 @@ class Femnist(Dataset):
             If the test set was not initialized
         """
         if self.__testing__:
-            return Data(self.test_x, self.test_y)
+            return DataLoader(Data(self.test_x, self.test_y))
         raise RuntimeError("Test set not initialized!")
+
+    def imshow(self, img):
+        npimg = img.numpy()
+        plt.imshow(np.transpose(npimg, (1, 2, 0)))
+        plt.show()
+
+    def test(self, model):
+        testloader = self.get_testset()
+        # dataiter = iter(testloader)
+        # images, labels = dataiter.next()
+        # self.imshow(torchvision.utils.make_grid(images))
+        # plt.savefig(' '.join('%5s' % j for j in labels) + ".png")
+        # print(' '.join('%5s' % j for j in labels))
+
+        correct_pred = [0 for _ in range(NUM_CLASSES)]
+        total_pred = [0 for _ in range(NUM_CLASSES)]
+        with torch.no_grad():
+            for elems, labels in testloader:
+                outputs = model(elems)
+                _, predictions = torch.max(outputs, 1)
+                for label, prediction in zip(labels, predictions):
+                    if label == prediction:
+                        correct_pred[label] += 1
+                    total_pred[label] += 1
+
+        total_correct = 0
+
+        for key, value in enumerate(correct_pred):
+            accuracy = 100 * float(value) / total_pred[key]
+            total_correct += value
+            logging.debug("Accuracy for class {} is: {:.1f} %".format(key, accuracy))
+
+        accuracy = 100 * float(total_correct) / testloader.__len__()
+        logging.info("Overall accuracy is: {:.1f} %".format(accuracy))
 
 
 class LogisticRegression(nn.Module):
@@ -220,4 +263,22 @@ class LogisticRegression(nn.Module):
         """
         x = torch.flatten(x, start_dim=1)
         x = self.fc1(x)
-        return F.log_softmax(x, dim=1)
+        return x
+
+
+class CNN(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(1, 32, 5, padding=2)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.conv2 = nn.Conv2d(32, 64, 5, padding=2)
+        self.fc1 = nn.Linear(7 * 7 * 64, 512)
+        self.fc2 = nn.Linear(512, NUM_CLASSES)
+
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = torch.flatten(x, 1)
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x

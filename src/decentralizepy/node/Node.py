@@ -1,19 +1,17 @@
+import importlib
 import logging
 import os
 
-from decentralizepy.datasets.Dataset import Dataset
+from decentralizepy import utils
 from decentralizepy.graphs.Graph import Graph
 from decentralizepy.mappings.Mapping import Mapping
-from decentralizepy import utils
-
-from torch import optim
-import importlib
 
 
 class Node:
     """
     This class defines the node (entity that performs learning, sharing and communication).
     """
+
     def __init__(
         self,
         rank: int,
@@ -21,7 +19,7 @@ class Node:
         mapping: Mapping,
         graph: Graph,
         config,
-        iterations = 1,
+        iterations=1,
         log_dir=".",
         log_level=logging.INFO,
         *args
@@ -78,12 +76,14 @@ class Node:
         logging.debug("Rank: %d", self.rank)
         logging.debug("type(graph): %s", str(type(self.rank)))
         logging.debug("type(mapping): %s", str(type(self.mapping)))
-        
+
         dataset_configs = config["DATASET"]
         dataset_module = importlib.import_module(dataset_configs["dataset_package"])
         dataset_class = getattr(dataset_module, dataset_configs["dataset_class"])
-        dataset_params = utils.remove_keys(dataset_configs, ["dataset_package", "dataset_class", "model_class"])
-        self.dataset =  dataset_class(rank, **dataset_params)
+        dataset_params = utils.remove_keys(
+            dataset_configs, ["dataset_package", "dataset_class", "model_class"]
+        )
+        self.dataset = dataset_class(rank, **dataset_params)
 
         logging.info("Dataset instantiation complete.")
 
@@ -91,9 +91,15 @@ class Node:
         self.model = model_class()
 
         optimizer_configs = config["OPTIMIZER_PARAMS"]
-        optimizer_module = importlib.import_module(optimizer_configs["optimizer_package"])
-        optimizer_class = getattr(optimizer_module, optimizer_configs["optimizer_class"])
-        optimizer_params = utils.remove_keys(optimizer_configs, ["optimizer_package", "optimizer_class"])
+        optimizer_module = importlib.import_module(
+            optimizer_configs["optimizer_package"]
+        )
+        optimizer_class = getattr(
+            optimizer_module, optimizer_configs["optimizer_class"]
+        )
+        optimizer_params = utils.remove_keys(
+            optimizer_configs, ["optimizer_package", "optimizer_class"]
+        )
         self.optimizer = optimizer_class(self.model.parameters(), **optimizer_params)
 
         train_configs = config["TRAIN_PARAMS"]
@@ -101,11 +107,28 @@ class Node:
         train_class = getattr(train_module, train_configs["training_class"])
 
         loss_package = importlib.import_module(train_configs["loss_package"])
-        loss = getattr(loss_package, train_configs["loss"])
+        if "loss_class" in train_configs.keys():
+            loss_class = getattr(loss_package, train_configs["loss_class"])
+            loss = loss_class()
+        else:
+            loss = getattr(loss_package, train_configs["loss"])
 
-        train_params = utils.remove_keys(train_configs, ["training_package", "training_class", "loss", "loss_package"])
+        train_params = utils.remove_keys(
+            train_configs,
+            [
+                "training_package",
+                "training_class",
+                "loss",
+                "loss_package",
+                "loss_class",
+            ],
+        )
         self.trainer = train_class(self.model, self.optimizer, loss, **train_params)
+
+        self.testset = self.dataset.get_trainset()
 
         for iteration in range(iterations):
             logging.info("Starting training iteration: %d", iteration)
             self.trainer.train(self.dataset)
+            if self.dataset.__testing__:
+                self.dataset.test(self.model)

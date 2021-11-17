@@ -47,6 +47,6 @@ class Linear(Mapping):
         Returns
         -------
         2-tuple
-            a tuple of machine_id and rank
+            a tuple of rank and machine_id
         """
-        return (uid // self.procs_per_machine), (uid % self.procs_per_machine)
+        return (uid % self.procs_per_machine), (uid // self.procs_per_machine)

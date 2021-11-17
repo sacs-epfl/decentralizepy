@@ -1,5 +1,6 @@
 from decentralizepy import utils
 
+
 class Dataset:
     """
     This class defines the Dataset API.
@@ -32,7 +33,6 @@ class Dataset:
         if self.sizes:
             if type(self.sizes) == str:
                 self.sizes = eval(self.sizes)
-
 
         if train_dir:
             self.__training__ = True

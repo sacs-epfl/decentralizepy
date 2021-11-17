@@ -38,7 +38,7 @@ class Mapping:
         Returns
         -------
         2-tuple
-            a tuple of machine_id and rank
+            a tuple of rank and machine_id
         """
 
         raise NotImplementedError
