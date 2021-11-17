@@ -102,4 +102,4 @@ class Communication:
         to_send = self.encrypt(data)
         id = str(uid).encode()
         self.peer_sockets[id].send(to_send)
-        print("Message sent")
+        print("{} sent the message to {}.".format(self.uid, uid))
