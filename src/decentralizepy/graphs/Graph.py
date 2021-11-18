@@ -73,7 +73,7 @@ class Graph:
             elif type == "adjacency":
                 node_id = 0
                 for line in lines:
-                    neighbours = line.strip().split()
+                    neighbours = map(int, line.strip().split())
                     self.__insert_adj__(node_id, neighbours)
                     node_id += 1
             else:

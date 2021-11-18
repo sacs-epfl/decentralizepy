@@ -3,6 +3,7 @@ import logging
 import os
 
 from decentralizepy import utils
+from decentralizepy.communication.Communication import Communication
 from decentralizepy.graphs.Graph import Graph
 from decentralizepy.mappings.Mapping import Mapping
 
@@ -70,8 +71,10 @@ class Node:
         logging.info("Started process.")
 
         self.rank = rank
+        self.machine_id = machine_id
         self.graph = graph
         self.mapping = mapping
+        self.uid = self.mapping.get_uid(rank, machine_id)
 
         logging.debug("Rank: %d", self.rank)
         logging.debug("type(graph): %s", str(type(self.rank)))
@@ -125,10 +128,28 @@ class Node:
         )
         self.trainer = train_class(self.model, self.optimizer, loss, **train_params)
 
-        self.testset = self.dataset.get_trainset()
+        
+        comm_configs = config["COMMUNICATION"]
+        comm_module = importlib.import_module(comm_configs["comm_package"])
+        comm_class = getattr(comm_module, comm_configs["comm_class"])
+        comm_params = utils.remove_keys(comm_configs, ["comm_package", "comm_class"])
+        self.communication = comm_class(self.rank, self.machine_id, self.mapping, self.graph.n_procs, **comm_params)
+        self.communication.connect_neighbors(self.graph.neighbors(self.uid))
+    
+        sharing_configs = config["SHARING"]
+        sharing_package = importlib.import_module(sharing_configs["sharing_package"])
+        sharing_class = getattr(sharing_package, sharing_configs["sharing_class"])
+        self.sharing = sharing_class(self.rank, self.machine_id, self.communication, self.mapping, self.graph, self.model, self.dataset)
+
+        
+        
+        self.testset = self.dataset.get_testset()
 
         for iteration in range(iterations):
             logging.info("Starting training iteration: %d", iteration)
             self.trainer.train(self.dataset)
+            
+            self.sharing.step()
+            
             if self.dataset.__testing__:
                 self.dataset.test(self.model)

@@ -1,20 +1,29 @@
-from torch import multiprocessing as mp
-
-from decentralizepy.communication.Communication import Communication
+from decentralizepy.node.Node import Node
+from decentralizepy.graphs.Graph import Graph
 from decentralizepy.mappings.Linear import Linear
+from torch import multiprocessing as mp
+import logging
+
+from localconfig import LocalConfig
+
+def read_ini(file_path):
+    config = LocalConfig(file_path)
+    for section in config:
+        print("Section: ", section)
+        for key, value in config.items(section):
+            print((key, value))
+    print(dict(config.items('DATASET')))
+    return config
 
 
-def f(rank, m_id, total_procs, filePath, mapping):
-    c = Communication(rank, m_id, total_procs, filePath, mapping)
+if __name__ == "__main__":   
+    config = read_ini("config.ini")
+    my_config = dict()
+    for section in config:
+        my_config[section] = dict(config.items(section))
 
-    c.connect_neighbours([i for i in range(total_procs) if i != c.uid])
-    send = {}
-    send["message"] = "Hi I am rank {}".format(rank)
-    c.send((c.uid + 1) % total_procs, send)
-    print(c.uid, c.receive())
+    g = Graph()
+    g.read_graph_from_file("graph.adj", "adjacency")
+    l = Linear(1, 6)
 
-
-if __name__ == "__main__":
-    l = Linear(2, 2)
-    m_id = int(input())
-    mp.spawn(fn=f, nprocs=2, args=[m_id, 4, "ip_addr.json", l])
+    mp.spawn(fn = Node, nprocs = 6, args=[0,l,g,my_config,20,"results",logging.DEBUG])
