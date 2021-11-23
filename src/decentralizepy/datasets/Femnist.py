@@ -116,6 +116,8 @@ class Femnist(Dataset):
         self.train_y = np.array(my_train_data["y"], dtype=np.dtype("int64")).reshape(-1)
         logging.debug("train_x.shape: %s", str(self.train_x.shape))
         logging.debug("train_y.shape: %s", str(self.train_y.shape))
+        assert self.train_x.shape[0] == self.train_y.shape[0]
+        assert self.train_x.shape[0] > 0
 
     def load_testset(self):
         logging.info("Loading testing set.")
@@ -135,6 +137,8 @@ class Femnist(Dataset):
         self.test_y = np.array(test_y, dtype=np.dtype("int64")).reshape(-1)
         logging.debug("test_x.shape: %s", str(self.test_x.shape))
         logging.debug("test_y.shape: %s", str(self.test_y.shape))
+        assert self.test_x.shape[0] == self.test_y.shape[0]
+        assert self.test_x.shape[0] > 0
 
     def __init__(
         self,
