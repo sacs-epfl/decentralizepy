@@ -159,6 +159,7 @@ class Node:
             self.trainer.train(self.dataset)
 
             self.sharing.step()
+            self.optimizer = optimizer_class(self.model.parameters(), **optimizer_params) # Reset optimizer state
 
             rounds_to_test -= 1
 
