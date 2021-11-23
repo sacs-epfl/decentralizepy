@@ -45,7 +45,6 @@ class Training:
 
     def reset_optimizer(self, optimizer):
         self.optimizer = optimizer
-        
 
     def train(self, dataset):
         """

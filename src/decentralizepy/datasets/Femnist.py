@@ -272,7 +272,7 @@ class Femnist(Dataset):
                     total_pred[label] += 1
                     total_predicted += 1
 
-        logging.debug("Predicted on the test set")
+        logging.info("Predicted on the test set")
 
         for key, value in enumerate(correct_pred):
             if total_pred[key] != 0:
@@ -283,7 +283,7 @@ class Femnist(Dataset):
 
         accuracy = 100 * float(total_correct) / total_predicted
         logging.info("Overall accuracy is: {:.1f} %".format(accuracy))
-        logging.debug("Evaluating complete.")
+        logging.info("Evaluating complete.")
 
 
 class LogisticRegression(nn.Module):

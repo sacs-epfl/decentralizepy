@@ -42,5 +42,5 @@ if __name__ == "__main__":
     mp.spawn(
         fn=Node,
         nprocs=procs_per_machine,
-        args=[m_id, l, g, my_config, 20, "results", logging.INFO],
+        args=[m_id, l, g, my_config, 20, "results", logging.DEBUG],
     )
