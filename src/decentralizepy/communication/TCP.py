@@ -22,7 +22,7 @@ class TCP(Communication):
 
     def __init__(self, rank, machine_id, mapping, total_procs, addresses_filepath):
         super().__init__(rank, machine_id, mapping, total_procs)
-        
+
         with open(addresses_filepath) as addrs:
             self.ip_addrs = json.load(addrs)
 
@@ -111,6 +111,6 @@ class TCP(Communication):
 
     def disconnect_neighbors(self):
         if not self.sent_disconnections:
-                for sock in self.peer_sockets.values():
-                    sock.send(BYE)
-                self.sent_disconnections = True
+            for sock in self.peer_sockets.values():
+                sock.send(BYE)
+            self.sent_disconnections = True

@@ -86,17 +86,16 @@ class Graph:
 
     def write_graph_to_file(self, file, type="edges"):
         with open(file, "w") as of:
-            of.write(str(self.n_procs) + '\n')
+            of.write(str(self.n_procs) + "\n")
             if type == "edges":
                 for node, adj in enumerate(self.adj_list):
                     for neighbor in adj:
-                        of.write("{} {}".format(node, neighbor)+ '\n')
+                        of.write("{} {}".format(node, neighbor) + "\n")
             elif type == "adjacency":
                 for adj in self.adj_list:
-                    of.write(str(*adj) + '\n')
+                    of.write(str(*adj) + "\n")
             else:
                 raise ValueError("type must be from {edges, adjacency}!")
-
 
     def connect_graph(self):
         """

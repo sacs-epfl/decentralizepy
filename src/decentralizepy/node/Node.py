@@ -23,7 +23,7 @@ class Node:
         iterations=1,
         log_dir=".",
         log_level=logging.INFO,
-        test_after = 5,
+        test_after=5,
         *args
     ):
         """
@@ -129,32 +129,39 @@ class Node:
         )
         self.trainer = train_class(self.model, self.optimizer, loss, **train_params)
 
-        
         comm_configs = config["COMMUNICATION"]
         comm_module = importlib.import_module(comm_configs["comm_package"])
         comm_class = getattr(comm_module, comm_configs["comm_class"])
         comm_params = utils.remove_keys(comm_configs, ["comm_package", "comm_class"])
-        self.communication = comm_class(self.rank, self.machine_id, self.mapping, self.graph.n_procs, **comm_params)
+        self.communication = comm_class(
+            self.rank, self.machine_id, self.mapping, self.graph.n_procs, **comm_params
+        )
         self.communication.connect_neighbors(self.graph.neighbors(self.uid))
-    
+
         sharing_configs = config["SHARING"]
         sharing_package = importlib.import_module(sharing_configs["sharing_package"])
         sharing_class = getattr(sharing_package, sharing_configs["sharing_class"])
-        self.sharing = sharing_class(self.rank, self.machine_id, self.communication, self.mapping, self.graph, self.model, self.dataset)
+        self.sharing = sharing_class(
+            self.rank,
+            self.machine_id,
+            self.communication,
+            self.mapping,
+            self.graph,
+            self.model,
+            self.dataset,
+        )
 
-        
-        
         self.testset = self.dataset.get_testset()
         rounds_to_test = test_after
 
         for iteration in range(iterations):
             logging.info("Starting training iteration: %d", iteration)
             self.trainer.train(self.dataset)
-            
+
             self.sharing.step()
 
             rounds_to_test -= 1
-            
+
             if self.dataset.__testing__ and rounds_to_test == 0:
                 rounds_to_test = test_after
                 self.dataset.test(self.model)

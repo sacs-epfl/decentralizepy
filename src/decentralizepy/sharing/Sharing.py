@@ -1,8 +1,10 @@
-from collections import deque
 import json
 import logging
-import torch
+from collections import deque
+
 import numpy
+import torch
+
 
 class Sharing:
     """
@@ -29,7 +31,6 @@ class Sharing:
             if len(i) == 0:
                 return False
         return True
-        
 
     def get_neighbors(self, neighbors):
         # modify neighbors here
@@ -46,14 +47,13 @@ class Sharing:
         for key, value in m.items():
             state_dict[key] = torch.from_numpy(numpy.array(json.loads(value)))
         return state_dict
- 
 
     def step(self):
         data = self.serialized_model()
         my_uid = self.mapping.get_uid(self.rank, self.machine_id)
         all_neighbors = self.graph.neighbors(my_uid)
         iter_neighbors = self.get_neighbors(all_neighbors)
-        data['degree'] = len(all_neighbors)
+        data["degree"] = len(all_neighbors)
         for neighbor in iter_neighbors:
             self.communication.send(neighbor, data)
 
@@ -63,14 +63,14 @@ class Sharing:
             degree = data["degree"]
             del data["degree"]
             self.peer_deques[sender].append((degree, self.deserialized_model(data)))
-        
+
         logging.info("Starting model averaging after receiving from all neighbors")
         total = dict()
         weight_total = 0
         for i, n in enumerate(self.peer_deques):
             logging.debug("Averaging model from neighbor {}".format(i))
             degree, data = self.peer_deques[n].popleft()
-            weight = 1/(max(len(self.peer_deques), degree) + 1) # Metro-Hastings
+            weight = 1 / (max(len(self.peer_deques), degree) + 1)  # Metro-Hastings
             weight_total += weight
             for key, value in data.items():
                 if key in total:
@@ -79,7 +79,7 @@ class Sharing:
                     total[key] = value * weight
 
         for key, value in self.model.state_dict().items():
-            total[key] += (1 - weight_total) * value # Metro-Hastings
+            total[key] += (1 - weight_total) * value  # Metro-Hastings
 
         self.model.load_state_dict(total)
 

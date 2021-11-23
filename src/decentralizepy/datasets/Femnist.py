@@ -29,8 +29,12 @@ class Femnist(Dataset):
 
     def __read_file__(self, file_path):
         with open(file_path, "r") as inf:
-                client_data = json.load(inf)
-        return client_data["users"], client_data["num_samples"], client_data["user_data"]
+            client_data = json.load(inf)
+        return (
+            client_data["users"],
+            client_data["num_samples"],
+            client_data["user_data"],
+        )
 
     def __read_dir__(self, data_dir):
         """
@@ -67,10 +71,9 @@ class Femnist(Dataset):
             my_data["num_samples"] = num_samples[index]
             my_samples = {"x": train_data[client]["x"], "y": train_data[client]["y"]}
             my_data["user_data"] = {client: my_samples}
-            with open(os.path.join(write_dir, client+".json"), "w") as of:
+            with open(os.path.join(write_dir, client + ".json"), "w") as of:
                 json.dump(my_data, of)
-                print("Created File: ", client+".json")
-        
+                print("Created File: ", client + ".json")
 
     def load_trainset(self):
         logging.info("Loading training set.")
@@ -79,7 +82,7 @@ class Femnist(Dataset):
         files.sort()
         c_len = len(files)
 
-        #clients, num_samples, train_data = self.__read_dir__(self.train_dir)
+        # clients, num_samples, train_data = self.__read_dir__(self.train_dir)
 
         if self.sizes == None:  # Equal distribution of data among processes
             e = c_len // self.n_procs
@@ -97,7 +100,9 @@ class Femnist(Dataset):
         for i in range(my_clients.__len__()):
             cur_file = my_clients.__getitem__(i)
 
-            clients, _, train_data = self.__read_file__(os.path.join(self.train_dir, cur_file))
+            clients, _, train_data = self.__read_file__(
+                os.path.join(self.train_dir, cur_file)
+            )
             for cur_client in clients:
                 self.clients.append(cur_client)
                 my_train_data["x"].extend(train_data[cur_client]["x"])
@@ -108,13 +113,10 @@ class Femnist(Dataset):
             .reshape(-1, 28, 28, 1)
             .transpose(0, 3, 1, 2)
         )
-        self.train_y = np.array(
-            my_train_data["y"], dtype=np.dtype("int64")
-        ).reshape(-1)
+        self.train_y = np.array(my_train_data["y"], dtype=np.dtype("int64")).reshape(-1)
         logging.debug("train_x.shape: %s", str(self.train_x.shape))
         logging.debug("train_y.shape: %s", str(self.train_y.shape))
 
-    
     def load_testset(self):
         logging.info("Loading testing set.")
         _, _, test_data = self.__read_dir__(self.test_dir)
@@ -134,9 +136,15 @@ class Femnist(Dataset):
         logging.debug("test_x.shape: %s", str(self.test_x.shape))
         logging.debug("test_y.shape: %s", str(self.test_y.shape))
 
-
-
-    def __init__(self, rank=0, n_procs="", train_dir="", test_dir="", sizes="", test_batch_size=1024):
+    def __init__(
+        self,
+        rank=0,
+        n_procs="",
+        train_dir="",
+        test_dir="",
+        sizes="",
+        test_batch_size=1024,
+    ):
         """
         Constructor which reads the data files, instantiates and partitions the dataset
         Parameters
@@ -230,7 +238,9 @@ class Femnist(Dataset):
             If the test set was not initialized
         """
         if self.__testing__:
-            return DataLoader(Data(self.test_x, self.test_y), batch_size=self.test_batch_size)
+            return DataLoader(
+                Data(self.test_x, self.test_y), batch_size=self.test_batch_size
+            )
         raise RuntimeError("Test set not initialized!")
 
     def imshow(self, img):

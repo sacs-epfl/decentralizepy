@@ -2,6 +2,7 @@ class Communication:
     """
     Communcation API
     """
+
     def __init__(self, rank, machine_id, mapping, total_procs):
         self.total_procs = total_procs
         self.rank = rank
@@ -17,7 +18,7 @@ class Communication:
 
     def connect_neighbors(self, neighbors):
         raise NotImplementedError
-    
+
     def receive(self):
         raise NotImplementedError
 

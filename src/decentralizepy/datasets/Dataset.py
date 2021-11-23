@@ -7,7 +7,15 @@ class Dataset:
     All datasets must follow this API.
     """
 
-    def __init__(self, rank="", n_procs="", train_dir="", test_dir="", sizes="", test_batch_size=""):
+    def __init__(
+        self,
+        rank="",
+        n_procs="",
+        train_dir="",
+        test_dir="",
+        sizes="",
+        test_batch_size="",
+    ):
         """
         Constructor which reads the data files, instantiates and partitions the dataset
         Parameters
