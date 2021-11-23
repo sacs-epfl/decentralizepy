@@ -160,6 +160,7 @@ class Node:
 
             self.sharing.step()
             self.optimizer = optimizer_class(self.model.parameters(), **optimizer_params) # Reset optimizer state
+            self.trainer.reset_optimizer(self.optimizer)
 
             rounds_to_test -= 1
 

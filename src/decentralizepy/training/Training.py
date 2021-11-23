@@ -43,6 +43,10 @@ class Training:
         plt.imshow(np.transpose(npimg, (1, 2, 0)))
         plt.show()
 
+    def reset_optimizer(self, optimizer):
+        self.optimizer = optimizer
+        
+
     def train(self, dataset):
         """
         One training iteration
