@@ -23,3 +23,6 @@ class Communication:
 
     def send(self, uid, data):
         raise NotImplementedError
+
+    def disconnect_neighbors(self):
+        raise NotImplementedError

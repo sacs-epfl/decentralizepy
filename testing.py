@@ -23,7 +23,9 @@ if __name__ == "__main__":
         my_config[section] = dict(config.items(section))
 
     g = Graph()
-    g.read_graph_from_file("graph.adj", "adjacency")
-    l = Linear(1, 6)
+    g.read_graph_from_file("36_nodes.edges", "edges")
+    n_machines = 3
+    procs_per_machine = 12
+    l = Linear(n_machines, procs_per_machine)
 
-    mp.spawn(fn = Node, nprocs = 6, args=[0,l,g,my_config,20,"results",logging.DEBUG])
+    mp.spawn(fn = Node, nprocs = procs_per_machine, args=[0,l,g,my_config,20,"results",logging.DEBUG])

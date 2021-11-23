@@ -27,6 +27,11 @@ class Femnist(Dataset):
     Class for the FEMNIST dataset
     """
 
+    def __read_file__(self, file_path):
+        with open(file_path, "r") as inf:
+                client_data = json.load(inf)
+        return client_data["users"], client_data["num_samples"], client_data["user_data"]
+
     def __read_dir__(self, data_dir):
         """
         Function to read all the FEMNIST data files in the directory
@@ -48,15 +53,90 @@ class Femnist(Dataset):
         files = [f for f in files if f.endswith(".json")]
         for f in files:
             file_path = os.path.join(data_dir, f)
-            with open(file_path, "r") as inf:
-                client_data = json.load(inf)
-            clients.extend(client_data["users"])
-            num_samples.extend(client_data["num_samples"])
-            data.update(client_data["user_data"])
-
+            u, n, d = self.__read_file__(file_path)
+            clients.extend(u)
+            num_samples.extend(n)
+            data.update(d)
         return clients, num_samples, data
 
-    def __init__(self, rank, n_procs="", train_dir="", test_dir="", sizes=""):
+    def file_per_user(self, dir, write_dir):
+        clients, num_samples, train_data = self.__read_dir__(dir)
+        for index, client in enumerate(clients):
+            my_data = dict()
+            my_data["users"] = [client]
+            my_data["num_samples"] = num_samples[index]
+            my_samples = {"x": train_data[client]["x"], "y": train_data[client]["y"]}
+            my_data["user_data"] = {client: my_samples}
+            with open(os.path.join(write_dir, client+".json"), "w") as of:
+                json.dump(my_data, of)
+                print("Created File: ", client+".json")
+        
+
+    def load_trainset(self):
+        logging.info("Loading training set.")
+        files = os.listdir(self.train_dir)
+        files = [f for f in files if f.endswith(".json")]
+        files.sort()
+        c_len = len(files)
+
+        #clients, num_samples, train_data = self.__read_dir__(self.train_dir)
+
+        if self.sizes == None:  # Equal distribution of data among processes
+            e = c_len // self.n_procs
+            frac = e / c_len
+            self.sizes = [frac] * self.n_procs
+            self.sizes[-1] += 1.0 - frac * self.n_procs
+            logging.debug("Size fractions: {}".format(self.sizes))
+
+        my_clients = DataPartitioner(files, self.sizes).use(self.rank)
+        my_train_data = {"x": [], "y": []}
+        self.clients = []
+        self.num_samples = []
+        logging.debug("Clients Length: %d", c_len)
+        logging.debug("My_clients_len: %d", my_clients.__len__())
+        for i in range(my_clients.__len__()):
+            cur_file = my_clients.__getitem__(i)
+
+            clients, _, train_data = self.__read_file__(os.path.join(self.train_dir, cur_file))
+            for cur_client in clients:
+                self.clients.append(cur_client)
+                my_train_data["x"].extend(train_data[cur_client]["x"])
+                my_train_data["y"].extend(train_data[cur_client]["y"])
+                self.num_samples.append(len(train_data[cur_client]["y"]))
+        self.train_x = (
+            np.array(my_train_data["x"], dtype=np.dtype("float32"))
+            .reshape(-1, 28, 28, 1)
+            .transpose(0, 3, 1, 2)
+        )
+        self.train_y = np.array(
+            my_train_data["y"], dtype=np.dtype("int64")
+        ).reshape(-1)
+        logging.debug("train_x.shape: %s", str(self.train_x.shape))
+        logging.debug("train_y.shape: %s", str(self.train_y.shape))
+
+    
+    def load_testset(self):
+        logging.info("Loading testing set.")
+        _, _, test_data = self.__read_dir__(self.test_dir)
+        test_x = []
+        test_y = []
+        for test_data in test_data.values():
+            for x in test_data["x"]:
+                test_x.append(x)
+            for y in test_data["y"]:
+                test_y.append(y)
+        self.test_x = (
+            np.array(test_x, dtype=np.dtype("float32"))
+            .reshape(-1, 28, 28, 1)
+            .transpose(0, 3, 1, 2)
+        )
+        self.test_y = np.array(test_y, dtype=np.dtype("int64")).reshape(-1)
+        logging.debug("test_x.shape: %s", str(self.test_x.shape))
+        logging.debug("test_y.shape: %s", str(self.test_y.shape))
+
+
+
+    def __init__(self, rank=0, n_procs="", train_dir="", test_dir="", sizes="", test_batch_size=1024):
         """
         Constructor which reads the data files, instantiates and partitions the dataset
         Parameters
@@ -74,61 +154,13 @@ class Femnist(Dataset):
             A list of fractions specifying how much data to alot each process. Sum of fractions should be 1.0
             By default, each process gets an equal amount.
         """
-        super().__init__(rank, n_procs, train_dir, test_dir, sizes)
+        super().__init__(rank, n_procs, train_dir, test_dir, sizes, test_batch_size)
 
         if self.__training__:
-            logging.info("Loading training set.")
-            clients, num_samples, train_data = self.__read_dir__(self.train_dir)
-            c_len = len(clients)
-
-            if self.sizes == None:  # Equal distribution of data among processes
-                e = c_len // self.n_procs
-                frac = e / c_len
-                self.sizes = [frac] * self.n_procs
-                self.sizes[-1] += 1.0 - frac * self.n_procs
-                logging.debug("Size fractions: {}".format(sizes))
-
-            my_clients = DataPartitioner(clients, self.sizes).use(self.rank)
-            my_train_data = {"x": [], "y": []}
-            self.clients = []
-            self.num_samples = []
-            logging.debug("Clients Length: %d", c_len)
-            logging.debug("My_clients_len: %d", my_clients.__len__())
-            for i in range(my_clients.__len__()):
-                cur_client = my_clients.__getitem__(i)
-                self.clients.append(cur_client)
-                my_train_data["x"].extend(train_data[cur_client]["x"])
-                my_train_data["y"].extend(train_data[cur_client]["y"])
-                self.num_samples.append(len(train_data[cur_client]["y"]))
-            self.train_x = (
-                np.array(my_train_data["x"], dtype=np.dtype("float32"))
-                .reshape(-1, 28, 28, 1)
-                .transpose(0, 3, 1, 2)
-            )
-            self.train_y = np.array(
-                my_train_data["y"], dtype=np.dtype("int64")
-            ).reshape(-1)
-            logging.debug("train_x.shape: %s", str(self.train_x.shape))
-            logging.debug("train_y.shape: %s", str(self.train_y.shape))
+            self.load_trainset()
 
         if self.__testing__:
-            logging.info("Loading testing set.")
-            _, _, test_data = self.__read_dir__(self.test_dir)
-            test_x = []
-            test_y = []
-            for test_data in test_data.values():
-                for x in test_data["x"]:
-                    test_x.append(x)
-                for y in test_data["y"]:
-                    test_y.append(y)
-            self.test_x = (
-                np.array(test_x, dtype=np.dtype("float32"))
-                .reshape(-1, 28, 28, 1)
-                .transpose(0, 3, 1, 2)
-            )
-            self.test_y = np.array(test_y, dtype=np.dtype("int64")).reshape(-1)
-            logging.debug("test_x.shape: %s", str(self.test_x.shape))
-            logging.debug("test_y.shape: %s", str(self.test_y.shape))
+            self.load_testset()
 
         # TODO: Add Validation
 
@@ -198,7 +230,7 @@ class Femnist(Dataset):
             If the test set was not initialized
         """
         if self.__testing__:
-            return DataLoader(Data(self.test_x, self.test_y))
+            return DataLoader(Data(self.test_x, self.test_y), batch_size=self.test_batch_size)
         raise RuntimeError("Test set not initialized!")
 
     def imshow(self, img):
@@ -207,33 +239,38 @@ class Femnist(Dataset):
         plt.show()
 
     def test(self, model):
+        logging.debug("Evaluating on test set.")
         testloader = self.get_testset()
-        # dataiter = iter(testloader)
-        # images, labels = dataiter.next()
-        # self.imshow(torchvision.utils.make_grid(images))
-        # plt.savefig(' '.join('%5s' % j for j in labels) + ".png")
-        # print(' '.join('%5s' % j for j in labels))
+
+        logging.debug("Test Loader instantiated.")
 
         correct_pred = [0 for _ in range(NUM_CLASSES)]
         total_pred = [0 for _ in range(NUM_CLASSES)]
+
+        total_correct = 0
+        total_predicted = 0
+
         with torch.no_grad():
             for elems, labels in testloader:
                 outputs = model(elems)
                 _, predictions = torch.max(outputs, 1)
                 for label, prediction in zip(labels, predictions):
+                    logging.debug("{} predicted as {}".format(label, prediction))
                     if label == prediction:
                         correct_pred[label] += 1
+                        total_correct += 1
                     total_pred[label] += 1
+                    total_predicted += 1
 
-        total_correct = 0
+        logging.debug("Predicted on the test set")
 
         for key, value in enumerate(correct_pred):
             accuracy = 100 * float(value) / total_pred[key]
-            total_correct += value
             logging.debug("Accuracy for class {} is: {:.1f} %".format(key, accuracy))
 
-        accuracy = 100 * float(total_correct) / testloader.__len__()
+        accuracy = 100 * float(total_correct) / total_predicted
         logging.info("Overall accuracy is: {:.1f} %".format(accuracy))
+        logging.debug("Evaluating complete.")
 
 
 class LogisticRegression(nn.Module):

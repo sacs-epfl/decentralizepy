@@ -23,6 +23,7 @@ class Node:
         iterations=1,
         log_dir=".",
         log_level=logging.INFO,
+        test_after = 5,
         *args
     ):
         """
@@ -144,12 +145,18 @@ class Node:
         
         
         self.testset = self.dataset.get_testset()
+        rounds_to_test = test_after
 
         for iteration in range(iterations):
             logging.info("Starting training iteration: %d", iteration)
             self.trainer.train(self.dataset)
             
             self.sharing.step()
+
+            rounds_to_test -= 1
             
-            if self.dataset.__testing__:
+            if self.dataset.__testing__ and rounds_to_test == 0:
+                rounds_to_test = test_after
                 self.dataset.test(self.model)
+
+        self.communication.disconnect_neighbors()

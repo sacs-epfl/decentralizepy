@@ -55,6 +55,7 @@ class TCP(Communication):
 
     def connect_neighbors(self, neighbors):
         for uid in neighbors:
+            logging.info("Connecting to my neighbour: {}".format(uid))
             id = str(uid).encode()
             req = self.context.socket(zmq.DEALER)
             req.setsockopt(zmq.IDENTITY, self.identity)
@@ -75,7 +76,7 @@ class TCP(Communication):
                     "A neighbour wants to disconnect before training started!"
                 )
             else:
-                logging.info(
+                logging.debug(
                     "Recieved message from {} @ connect_neighbors".format(sender)
                 )
 
@@ -97,12 +98,9 @@ class TCP(Communication):
         elif recv == BYE:
             logging.info("Recieved {} from {}".format(BYE, sender))
             self.barrier.remove(sender)
-            if not self.sent_disconnections:
-                for sock in self.peer_sockets.values():
-                    sock.send(BYE)
-                self.sent_disconnections = True
+            self.disconnect_neighbors()
         else:
-            logging.info("Recieved message from {}".format(sender))
+            logging.debug("Recieved message from {}".format(sender))
             return self.decrypt(sender, recv)
 
     def send(self, uid, data):
@@ -110,3 +108,9 @@ class TCP(Communication):
         id = str(uid).encode()
         self.peer_sockets[id].send(to_send)
         logging.info("{} sent the message to {}.".format(self.uid, uid))
+
+    def disconnect_neighbors(self):
+        if not self.sent_disconnections:
+                for sock in self.peer_sockets.values():
+                    sock.send(BYE)
+                self.sent_disconnections = True

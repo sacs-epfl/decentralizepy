@@ -77,12 +77,26 @@ class Graph:
                     self.__insert_adj__(node_id, neighbours)
                     node_id += 1
             else:
-                raise ValueError("Type must be from {edges, adjacency}!")
+                raise ValueError("type must be from {edges, adjacency}!")
 
         if force_connect:
             self.connect_graph()
 
         return self.n_procs
+
+    def write_graph_to_file(self, file, type="edges"):
+        with open(file, "w") as of:
+            of.write(str(self.n_procs) + '\n')
+            if type == "edges":
+                for node, adj in enumerate(self.adj_list):
+                    for neighbor in adj:
+                        of.write("{} {}".format(node, neighbor)+ '\n')
+            elif type == "adjacency":
+                for adj in self.adj_list:
+                    of.write(str(*adj) + '\n')
+            else:
+                raise ValueError("type must be from {edges, adjacency}!")
+
 
     def connect_graph(self):
         """

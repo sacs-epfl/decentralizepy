@@ -7,7 +7,7 @@ class Dataset:
     All datasets must follow this API.
     """
 
-    def __init__(self, rank="", n_procs="", train_dir="", test_dir="", sizes=""):
+    def __init__(self, rank="", n_procs="", train_dir="", test_dir="", sizes="", test_batch_size=""):
         """
         Constructor which reads the data files, instantiates and partitions the dataset
         Parameters
@@ -30,6 +30,7 @@ class Dataset:
         self.train_dir = utils.conditional_value(train_dir, "", None)
         self.test_dir = utils.conditional_value(test_dir, "", None)
         self.sizes = utils.conditional_value(sizes, "", None)
+        self.test_batch_size = utils.conditional_value(test_batch_size, "", 64)
         if self.sizes:
             if type(self.sizes) == str:
                 self.sizes = eval(self.sizes)
