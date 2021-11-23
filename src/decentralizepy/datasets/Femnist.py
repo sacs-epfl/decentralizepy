@@ -275,7 +275,10 @@ class Femnist(Dataset):
         logging.debug("Predicted on the test set")
 
         for key, value in enumerate(correct_pred):
-            accuracy = 100 * float(value) / total_pred[key]
+            if total_pred[key] != 0:
+                accuracy = 100 * float(value) / total_pred[key]
+            else:
+                accuracy = 100.0
             logging.debug("Accuracy for class {} is: {:.1f} %".format(key, accuracy))
 
         accuracy = 100 * float(total_correct) / total_predicted
