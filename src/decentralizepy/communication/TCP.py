@@ -98,7 +98,7 @@ class TCP(Communication):
         elif recv == BYE:
             logging.info("Recieved {} from {}".format(BYE, sender))
             self.barrier.remove(sender)
-            self.disconnect_neighbors()
+            return self.receive()
         else:
             logging.debug("Recieved message from {}".format(sender))
             return self.decrypt(sender, recv)
@@ -114,3 +114,15 @@ class TCP(Communication):
             for sock in self.peer_sockets.values():
                 sock.send(BYE)
             self.sent_disconnections = True
+            while len(self.barrier):
+                sender, recv = self.router.recv_multipart()
+                if recv == BYE:
+                    logging.info("Recieved {} from {}".format(BYE, sender))
+                    self.barrier.remove(sender)
+                else:
+                    logging.critical(
+                        "Recieved unexpected {} from {}".format(recv, sender)
+                    )
+                    raise RuntimeError(
+                        "Received a message when expecting BYE from {}".format(sender)
+                    )
