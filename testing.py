@@ -39,6 +39,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     Path(args.log_dir).mkdir(parents=True, exist_ok=True)
+    log_level = {"INFO": logging.INFO, "DEBUG": logging.DEBUG, "WARNING": logging.WARNING, "ERROR": logging.ERROR, "CRITICAL": logging.CRITICAL}
 
     config = read_ini(args.config_file)
     my_config = dict()
@@ -55,5 +56,5 @@ if __name__ == "__main__":
     mp.spawn(
         fn=Node,
         nprocs=procs_per_machine,
-        args=[m_id, l, g, my_config, args.iterations, args.log_dir, args.log_level],
+        args=[m_id, l, g, my_config, args.iterations, args.log_dir, log_level[args.log_level]],
     )
