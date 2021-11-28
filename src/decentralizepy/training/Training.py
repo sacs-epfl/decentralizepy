@@ -2,8 +2,6 @@ import logging
 
 import matplotlib.pyplot as plt
 import numpy as np
-import torch
-import torchvision
 
 from decentralizepy import utils
 
@@ -38,11 +36,6 @@ class Training:
         self.batch_size = utils.conditional_value(batch_size, "", int(1))
         self.shuffle = utils.conditional_value(shuffle, "", False)
 
-    def imshow(self, img):
-        npimg = img.numpy()
-        plt.imshow(np.transpose(npimg, (1, 2, 0)))
-        plt.show()
-
     def reset_optimizer(self, optimizer):
         self.optimizer = optimizer
 
@@ -55,12 +48,6 @@ class Training:
             The training dataset. Should implement get_trainset(batch_size, shuffle)
         """
         trainset = dataset.get_trainset(self.batch_size, self.shuffle)
-
-        # dataiter = iter(trainset)
-        # images, labels = dataiter.next()
-        # self.imshow(torchvision.utils.make_grid(images[:16]))
-        # plt.savefig(' '.join('%5s' % j for j in labels) + ".png")
-        # print(' '.join('%5s' % j for j in labels[:16]))
 
         for epoch in range(self.epochs_per_round):
             epoch_loss = 0.0

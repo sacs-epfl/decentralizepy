@@ -7,14 +7,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn.functional as F
-import torchvision
 from torch import nn
-from torch._C import ParameterDict
 from torch.utils.data import DataLoader
 
 from decentralizepy.datasets.Data import Data
 from decentralizepy.datasets.Dataset import Dataset
 from decentralizepy.datasets.Partitioner import DataPartitioner
+from decentralizepy.models.Model import Model
 
 NUM_CLASSES = 62
 IMAGE_SIZE = (28, 28)
@@ -290,7 +289,7 @@ class Femnist(Dataset):
         logging.info("Evaluating complete.")
 
 
-class LogisticRegression(nn.Module):
+class LogisticRegression(Model):
     """
     Class for a Logistic Regression Neural Network for FEMNIST
     """
@@ -320,7 +319,7 @@ class LogisticRegression(nn.Module):
         return x
 
 
-class CNN(nn.Module):
+class CNN(Model):
     def __init__(self):
         super().__init__()
         self.conv1 = nn.Conv2d(1, 32, 5, padding=2)
