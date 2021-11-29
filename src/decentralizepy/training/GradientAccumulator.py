@@ -7,7 +7,7 @@ class GradientAccumulator(Training):
     def __init__(
         self, model, optimizer, loss, epochs_per_round="", batch_size="", shuffle=""
     ):
-        super().__init__()
+        super().__init__(model, optimizer, loss, epochs_per_round, batch_size, shuffle)
 
     def train(self, dataset):
         """
@@ -30,9 +30,11 @@ class GradientAccumulator(Training):
                 epoch_loss += loss_val.item()
                 loss_val.backward()
                 self.model.accumulated_gradients.append(
-                    grad_dict={
+                    {
                         k: v.grad.clone().detach()
-                        for k, v in zip(self.model.state_dict(), self.parameters())
+                        for k, v in zip(
+                            self.model.state_dict(), self.model.parameters()
+                        )
                     }
                 )
                 self.optimizer.step()

@@ -141,6 +141,9 @@ class Node:
         sharing_configs = config["SHARING"]
         sharing_package = importlib.import_module(sharing_configs["sharing_package"])
         sharing_class = getattr(sharing_package, sharing_configs["sharing_class"])
+        sharing_params = utils.remove_keys(
+            sharing_configs, ["sharing_package", "sharing_class"]
+        )
         self.sharing = sharing_class(
             self.rank,
             self.machine_id,
@@ -149,6 +152,7 @@ class Node:
             self.graph,
             self.model,
             self.dataset,
+            **sharing_params
         )
 
         self.testset = self.dataset.get_testset()
