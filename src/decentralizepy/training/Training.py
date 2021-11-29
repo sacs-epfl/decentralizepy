@@ -2,6 +2,7 @@ import logging
 
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
 
 from decentralizepy import utils
 
@@ -38,6 +39,27 @@ class Training:
 
     def reset_optimizer(self, optimizer):
         self.optimizer = optimizer
+
+    def eval_loss(self, dataset):
+        """
+        Evaluate the loss
+        Parameters
+        ----------
+        dataset : decentralizepy.datasets.Dataset
+            The training dataset. Should implement get_trainset(batch_size, shuffle)
+        """
+        trainset = dataset.get_trainset(self.batch_size, self.shuffle)
+        epoch_loss = 0.0
+        count = 0
+        with torch.no_grad():
+            for data, target in trainset:
+                output = self.model(data)
+                loss_val = self.loss(output, target)
+                epoch_loss += loss_val.item()
+                count += 1
+        loss = epoch_loss / count
+        logging.info("Loss after iteration: {}".format(loss))
+        return loss
 
     def train(self, dataset):
         """

@@ -2,6 +2,8 @@ import importlib
 import logging
 import os
 
+from matplotlib import pyplot as plt
+
 from decentralizepy import utils
 from decentralizepy.communication.Communication import Communication
 from decentralizepy.graphs.Graph import Graph
@@ -12,6 +14,13 @@ class Node:
     """
     This class defines the node (entity that performs learning, sharing and communication).
     """
+
+    def save_plot(self, l, label, title, xlabel, filename):
+        plt.clf()
+        plt.plot(l, label=label)
+        plt.xlabel(xlabel)
+        plt.title(title)
+        plt.savefig(filename)
 
     def __init__(
         self,
@@ -113,9 +122,9 @@ class Node:
         loss_package = importlib.import_module(train_configs["loss_package"])
         if "loss_class" in train_configs.keys():
             loss_class = getattr(loss_package, train_configs["loss_class"])
-            loss = loss_class()
+            self.loss = loss_class()
         else:
-            loss = getattr(loss_package, train_configs["loss"])
+            self.loss = getattr(loss_package, train_configs["loss"])
 
         train_params = utils.remove_keys(
             train_configs,
@@ -127,7 +136,9 @@ class Node:
                 "loss_class",
             ],
         )
-        self.trainer = train_class(self.model, self.optimizer, loss, **train_params)
+        self.trainer = train_class(
+            self.model, self.optimizer, self.loss, **train_params
+        )
 
         comm_configs = config["COMMUNICATION"]
         comm_module = importlib.import_module(comm_configs["comm_package"])
@@ -157,6 +168,9 @@ class Node:
 
         self.testset = self.dataset.get_testset()
         rounds_to_test = test_after
+        self.train_loss = []
+        self.test_loss = []
+        self.test_acc = []
 
         for iteration in range(iterations):
             logging.info("Starting training iteration: %d", iteration)
@@ -168,10 +182,37 @@ class Node:
             )  # Reset optimizer state
             self.trainer.reset_optimizer(self.optimizer)
 
+            loss_after_sharing = self.trainer.eval_loss(self.dataset)
+            self.train_loss.append(loss_after_sharing)
+
             rounds_to_test -= 1
 
             if self.dataset.__testing__ and rounds_to_test == 0:
                 rounds_to_test = test_after
-                self.dataset.test(self.model)
+                ta, tl = self.dataset.test(self.model, self.loss)
+                self.test_acc.append(ta)
+                self.test_loss.append(tl)
+
+        self.save_plot(
+            self.train_loss,
+            "train_loss",
+            "Training Loss",
+            "Communication Rounds",
+            os.path.join(log_dir, "train_loss.png"),
+        )
+        self.save_plot(
+            self.test_loss,
+            "test_loss",
+            "Testing Loss",
+            "Communication Rounds",
+            os.path.join(log_dir, "test_loss.png"),
+        )
+        self.save_plot(
+            self.test_acc,
+            "test_acc",
+            "Testing Accuracy",
+            "Communication Rounds",
+            os.path.join(log_dir, "test_acc.png"),
+        )
 
         self.communication.disconnect_neighbors()

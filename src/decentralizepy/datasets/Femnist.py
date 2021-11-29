@@ -251,7 +251,7 @@ class Femnist(Dataset):
         plt.imshow(np.transpose(npimg, (1, 2, 0)))
         plt.show()
 
-    def test(self, model):
+    def test(self, model, loss):
         logging.debug("Evaluating on test set.")
         testloader = self.get_testset()
 
@@ -264,8 +264,12 @@ class Femnist(Dataset):
         total_predicted = 0
 
         with torch.no_grad():
+            loss_val = 0.0
+            count = 0
             for elems, labels in testloader:
                 outputs = model(elems)
+                loss_val += loss(outputs, labels).item()
+                count += 1
                 _, predictions = torch.max(outputs, 1)
                 for label, prediction in zip(labels, predictions):
                     logging.debug("{} predicted as {}".format(label, prediction))
@@ -285,8 +289,10 @@ class Femnist(Dataset):
             logging.debug("Accuracy for class {} is: {:.1f} %".format(key, accuracy))
 
         accuracy = 100 * float(total_correct) / total_predicted
+        loss_val = loss_val / count
         logging.info("Overall accuracy is: {:.1f} %".format(accuracy))
         logging.info("Evaluating complete.")
+        return accuracy, loss_val
 
 
 class LogisticRegression(Model):
