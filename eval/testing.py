@@ -61,6 +61,6 @@ if __name__ == "__main__":
             args.iterations,
             args.log_dir,
             log_level[args.log_level],
-            args.test_after
+            args.test_after,
         ],
     )

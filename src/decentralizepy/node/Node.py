@@ -198,21 +198,21 @@ class Node:
             "train_loss",
             "Training Loss",
             "Communication Rounds",
-            os.path.join(log_dir, "train_loss.png"),
+            os.path.join(log_dir, "{}_train_loss.png".format(self.rank)),
         )
         self.save_plot(
             self.test_loss,
             "test_loss",
             "Testing Loss",
             "Communication Rounds",
-            os.path.join(log_dir, "test_loss.png"),
+            os.path.join(log_dir, "{}_test_loss.png".format(self.rank)),
         )
         self.save_plot(
             self.test_acc,
             "test_acc",
             "Testing Accuracy",
             "Communication Rounds",
-            os.path.join(log_dir, "test_acc.png"),
+            os.path.join(log_dir, "{}_test_acc.png".format(self.rank)),
         )
 
         self.communication.disconnect_neighbors()

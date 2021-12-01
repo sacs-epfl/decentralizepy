@@ -28,7 +28,7 @@ def get_args():
     parser.add_argument("-ll", "--log_level", type=str, default="INFO")
     parser.add_argument("-gf", "--graph_file", type=str, default="36_nodes.edges")
     parser.add_argument("-gt", "--graph_type", type=str, default="edges")
-    parser.add_argument("-ta", "--test_after", type=int, default = 5)
+    parser.add_argument("-ta", "--test_after", type=int, default=5)
 
     args = parser.parse_args()
     return args
@@ -45,7 +45,7 @@ def write_args(args, path):
         "log_level": args.log_level,
         "graph_file": args.graph_file,
         "graph_type": args.graph_type,
-        "test_after": args.test_after
+        "test_after": args.test_after,
     }
     with open(os.path.join(path, "args.json"), "w") as of:
         json.dump(data, of)
