@@ -63,6 +63,7 @@ class Sharing:
             degree = data["degree"]
             del data["degree"]
             self.peer_deques[sender].append((degree, self.deserialized_model(data)))
+            logging.info("Deserialized received model from {}".format(sender))
 
         logging.info("Starting model averaging after receiving from all neighbors")
         total = dict()
