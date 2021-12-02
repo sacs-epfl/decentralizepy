@@ -68,16 +68,16 @@ class TCP(Communication):
             sender, recv = self.router.recv_multipart()
 
             if recv == HELLO:
-                logging.info("Recieved {} from {}".format(HELLO, sender))
+                logging.info("Received {} from {}".format(HELLO, sender))
                 self.barrier.add(sender)
             elif recv == BYE:
-                logging.info("Recieved {} from {}".format(BYE, sender))
+                logging.info("Received {} from {}".format(BYE, sender))
                 raise RuntimeError(
                     "A neighbour wants to disconnect before training started!"
                 )
             else:
                 logging.debug(
-                    "Recieved message from {} @ connect_neighbors".format(sender)
+                    "Received message from {} @ connect_neighbors".format(sender)
                 )
 
                 self.peer_deque.append(self.decrypt(sender, recv))
@@ -91,16 +91,16 @@ class TCP(Communication):
         sender, recv = self.router.recv_multipart()
 
         if recv == HELLO:
-            logging.info("Recieved {} from {}".format(HELLO, sender))
+            logging.info("Received {} from {}".format(HELLO, sender))
             raise RuntimeError(
                 "A neighbour wants to connect when everyone is connected!"
             )
         elif recv == BYE:
-            logging.info("Recieved {} from {}".format(BYE, sender))
+            logging.info("Received {} from {}".format(BYE, sender))
             self.barrier.remove(sender)
             return self.receive()
         else:
-            logging.debug("Recieved message from {}".format(sender))
+            logging.debug("Received message from {}".format(sender))
             return self.decrypt(sender, recv)
 
     def send(self, uid, data):
@@ -117,11 +117,11 @@ class TCP(Communication):
             while len(self.barrier):
                 sender, recv = self.router.recv_multipart()
                 if recv == BYE:
-                    logging.info("Recieved {} from {}".format(BYE, sender))
+                    logging.info("Received {} from {}".format(BYE, sender))
                     self.barrier.remove(sender)
                 else:
                     logging.critical(
-                        "Recieved unexpected {} from {}".format(recv, sender)
+                        "Received unexpected {} from {}".format(recv, sender)
                     )
                     raise RuntimeError(
                         "Received a message when expecting BYE from {}".format(sender)
