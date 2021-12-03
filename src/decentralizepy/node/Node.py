@@ -1,4 +1,5 @@
 import importlib
+import json
 import logging
 import os
 
@@ -17,7 +18,9 @@ class Node:
 
     def save_plot(self, l, label, title, xlabel, filename):
         plt.clf()
-        plt.plot(l, label=label)
+        x_axis = l.keys()
+        y_axis = [l[key] for key in x_axis]
+        plt.plot(x_axis, y_axis, label=label)
         plt.xlabel(xlabel)
         plt.title(title)
         plt.savefig(filename)
@@ -168,9 +171,9 @@ class Node:
 
         self.testset = self.dataset.get_testset()
         rounds_to_test = test_after
-        self.train_loss = []
-        self.test_loss = []
-        self.test_acc = []
+        self.train_loss = dict()
+        self.test_loss = dict()
+        self.test_acc = dict()
 
         for iteration in range(iterations):
             logging.info("Starting training iteration: %d", iteration)
@@ -183,36 +186,44 @@ class Node:
             self.trainer.reset_optimizer(self.optimizer)
 
             loss_after_sharing = self.trainer.eval_loss(self.dataset)
-            self.train_loss.append(loss_after_sharing)
+            self.train_loss[iteration + 1] = loss_after_sharing
 
             rounds_to_test -= 1
 
             if self.dataset.__testing__ and rounds_to_test == 0:
+                logging.info("Evaluating on test set.")
                 rounds_to_test = test_after
                 ta, tl = self.dataset.test(self.model, self.loss)
-                self.test_acc.append(ta)
-                self.test_loss.append(tl)
+                self.test_acc[iteration + 1] = ta
+                self.test_loss[iteration + 1] = tl
 
-        self.save_plot(
-            self.train_loss,
-            "train_loss",
-            "Training Loss",
-            "Communication Rounds",
-            os.path.join(log_dir, "{}_train_loss.png".format(self.rank)),
-        )
-        self.save_plot(
-            self.test_loss,
-            "test_loss",
-            "Testing Loss",
-            "Communication Rounds",
-            os.path.join(log_dir, "{}_test_loss.png".format(self.rank)),
-        )
-        self.save_plot(
-            self.test_acc,
-            "test_acc",
-            "Testing Accuracy",
-            "Communication Rounds",
-            os.path.join(log_dir, "{}_test_acc.png".format(self.rank)),
-        )
+                self.save_plot(
+                    self.train_loss,
+                    "train_loss",
+                    "Training Loss",
+                    "Communication Rounds",
+                    os.path.join(log_dir, "{}_train_loss.png".format(self.rank)),
+                )
+                self.save_plot(
+                    self.test_loss,
+                    "test_loss",
+                    "Testing Loss",
+                    "Communication Rounds",
+                    os.path.join(log_dir, "{}_test_loss.png".format(self.rank)),
+                )
+                self.save_plot(
+                    self.test_acc,
+                    "test_acc",
+                    "Testing Accuracy",
+                    "Communication Rounds",
+                    os.path.join(log_dir, "{}_test_acc.png".format(self.rank)),
+                )
+
+                with open(os.path.join(log_dir, "{}_train_loss.json"), "w") as of:
+                    json.dump(self.train_loss, of)
+                with open(os.path.join(log_dir, "{}_test_loss.json"), "w") as of:
+                    json.dump(self.test_loss, of)
+                with open(os.path.join(log_dir, "{}_test_acc.json"), "w") as of:
+                    json.dump(self.test_acc, of)
 
         self.communication.disconnect_neighbors()

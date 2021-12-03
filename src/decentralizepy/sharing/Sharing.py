@@ -57,13 +57,14 @@ class Sharing:
         for neighbor in iter_neighbors:
             self.communication.send(neighbor, data)
 
+        logging.info("Waiting for messages from neighbors")
         while not self.received_from_all():
             sender, data = self.communication.receive()
-            logging.info("Received model from {}".format(sender))
+            logging.debug("Received model from {}".format(sender))
             degree = data["degree"]
             del data["degree"]
             self.peer_deques[sender].append((degree, self.deserialized_model(data)))
-            logging.info("Deserialized received model from {}".format(sender))
+            logging.debug("Deserialized received model from {}".format(sender))
 
         logging.info("Starting model averaging after receiving from all neighbors")
         total = dict()

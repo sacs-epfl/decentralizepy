@@ -252,7 +252,6 @@ class Femnist(Dataset):
         plt.show()
 
     def test(self, model, loss):
-        logging.debug("Evaluating on test set.")
         testloader = self.get_testset()
 
         logging.debug("Test Loader instantiated.")
@@ -279,7 +278,7 @@ class Femnist(Dataset):
                     total_pred[label] += 1
                     total_predicted += 1
 
-        logging.info("Predicted on the test set")
+        logging.debug("Predicted on the test set")
 
         for key, value in enumerate(correct_pred):
             if total_pred[key] != 0:
@@ -291,7 +290,6 @@ class Femnist(Dataset):
         accuracy = 100 * float(total_correct) / total_predicted
         loss_val = loss_val / count
         logging.info("Overall accuracy is: {:.1f} %".format(accuracy))
-        logging.info("Evaluating complete.")
         return accuracy, loss_val
 
 

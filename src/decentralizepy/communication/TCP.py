@@ -54,8 +54,9 @@ class TCP(Communication):
         return sender, data
 
     def connect_neighbors(self, neighbors):
+        logging.info("Sending connection request to neighbors")
         for uid in neighbors:
-            logging.info("Connecting to my neighbour: {}".format(uid))
+            logging.debug("Connecting to my neighbour: {}".format(uid))
             id = str(uid).encode()
             req = self.context.socket(zmq.DEALER)
             req.setsockopt(zmq.IDENTITY, self.identity)
@@ -68,10 +69,10 @@ class TCP(Communication):
             sender, recv = self.router.recv_multipart()
 
             if recv == HELLO:
-                logging.info("Received {} from {}".format(HELLO, sender))
+                logging.debug("Received {} from {}".format(HELLO, sender))
                 self.barrier.add(sender)
             elif recv == BYE:
-                logging.info("Received {} from {}".format(BYE, sender))
+                logging.debug("Received {} from {}".format(BYE, sender))
                 raise RuntimeError(
                     "A neighbour wants to disconnect before training started!"
                 )
@@ -82,6 +83,8 @@ class TCP(Communication):
 
                 self.peer_deque.append(self.decrypt(sender, recv))
 
+        logging.info("Connected to all neighbors")
+
     def receive(self):
         if len(self.peer_deque) != 0:
             resp = self.peer_deque[0]
@@ -91,12 +94,12 @@ class TCP(Communication):
         sender, recv = self.router.recv_multipart()
 
         if recv == HELLO:
-            logging.info("Received {} from {}".format(HELLO, sender))
+            logging.debug("Received {} from {}".format(HELLO, sender))
             raise RuntimeError(
                 "A neighbour wants to connect when everyone is connected!"
             )
         elif recv == BYE:
-            logging.info("Received {} from {}".format(BYE, sender))
+            logging.debug("Received {} from {}".format(BYE, sender))
             self.barrier.remove(sender)
             return self.receive()
         else:
@@ -107,17 +110,18 @@ class TCP(Communication):
         to_send = self.encrypt(data)
         id = str(uid).encode()
         self.peer_sockets[id].send(to_send)
-        logging.info("{} sent the message to {}.".format(self.uid, uid))
+        logging.debug("{} sent the message to {}.".format(self.uid, uid))
 
     def disconnect_neighbors(self):
         if not self.sent_disconnections:
+            logging.info("Disconnecting neighbors")
             for sock in self.peer_sockets.values():
                 sock.send(BYE)
             self.sent_disconnections = True
             while len(self.barrier):
                 sender, recv = self.router.recv_multipart()
                 if recv == BYE:
-                    logging.info("Received {} from {}".format(BYE, sender))
+                    logging.debug("Received {} from {}".format(BYE, sender))
                     self.barrier.remove(sender)
                 else:
                     logging.critical(
