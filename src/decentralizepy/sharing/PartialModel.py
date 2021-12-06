@@ -58,7 +58,7 @@ class PartialModel(Sharing):
                     shared_params = json.load(inf)
             else:
                 shared_params = dict()
-                shared_params["order"] = self.model.state_dict().keys()
+                shared_params["order"] = list(self.model.state_dict().keys())
                 shapes = dict()
                 for k, v in self.model.state_dict().items():
                     shapes[k] = list(v.shape)
