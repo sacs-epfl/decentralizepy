@@ -88,6 +88,7 @@ class Node:
         self.graph = graph
         self.mapping = mapping
         self.uid = self.mapping.get_uid(rank, machine_id)
+        self.log_dir = log_dir
 
         logging.debug("Rank: %d", self.rank)
         logging.debug("type(graph): %s", str(type(self.rank)))
@@ -166,6 +167,7 @@ class Node:
             self.graph,
             self.model,
             self.dataset,
+            self.log_dir,
             **sharing_params
         )
 
