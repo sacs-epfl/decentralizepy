@@ -98,6 +98,8 @@ class PartialModel(Sharing):
 
             logging.info("Converted dictionary to json")
 
+            self.communication_round += 1
+
             return m
 
     def deserialized_model(self, m):
