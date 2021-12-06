@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 
 import numpy
 import torch
@@ -17,14 +18,16 @@ class PartialModel(Sharing):
         graph,
         model,
         dataset,
+        log_dir,
         alpha=1.0,
         dict_ordered=True,
     ):
         super().__init__(
-            rank, machine_id, communication, mapping, graph, model, dataset
+            rank, machine_id, communication, mapping, graph, model, dataset, log_dir
         )
         self.alpha = alpha
         self.dict_ordered = dict_ordered
+        self.communication_round = 0
 
     def extract_top_gradients(self):
         logging.info("Summing up gradients")
@@ -44,6 +47,31 @@ class PartialModel(Sharing):
     def serialized_model(self):
         with torch.no_grad():
             _, G_topk = self.extract_top_gradients()
+
+            if self.communication_round:
+                with open(
+                    os.path.join(
+                        self.log_dir, "{}_shared_params.json".format(self.rank)
+                    ),
+                    "r",
+                ) as inf:
+                    shared_params = json.load(inf)
+            else:
+                shared_params = dict()
+                shared_params["order"] = self.model.state_dict().keys()
+                shapes = dict()
+                for k, v in self.model.state_dict.items():
+                    shapes[k] = v.shape.tolist()
+                shared_params["shapes"] = shapes
+
+            shared_params[self.communication_round] = G_topk.tolist()
+
+            with open(
+                os.path.join(self.log_dir, "{}_shared_params.json".format(self.rank)),
+                "w",
+            ) as of:
+                json.dump(shared_params, of)
+
             logging.info("Extracting topk params")
 
             tensors_to_cat = [v.data.flatten() for v in self.model.parameters()]

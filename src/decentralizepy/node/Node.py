@@ -219,11 +219,17 @@ class Node:
                     os.path.join(log_dir, "{}_test_acc.png".format(self.rank)),
                 )
 
-                with open(os.path.join(log_dir, "{}_train_loss.json"), "w") as of:
+                with open(
+                    os.path.join(log_dir, "{}_train_loss.json".format(self.rank)), "w"
+                ) as of:
                     json.dump(self.train_loss, of)
-                with open(os.path.join(log_dir, "{}_test_loss.json"), "w") as of:
+                with open(
+                    os.path.join(log_dir, "{}_test_loss.json".format(self.rank)), "w"
+                ) as of:
                     json.dump(self.test_loss, of)
-                with open(os.path.join(log_dir, "{}_test_acc.json"), "w") as of:
+                with open(
+                    os.path.join(log_dir, "{}_test_acc.json".format(self.rank)), "w"
+                ) as of:
                     json.dump(self.test_acc, of)
 
         self.communication.disconnect_neighbors()
