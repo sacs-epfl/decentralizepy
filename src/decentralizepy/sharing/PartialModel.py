@@ -60,7 +60,7 @@ class PartialModel(Sharing):
                 shared_params = dict()
                 shared_params["order"] = self.model.state_dict().keys()
                 shapes = dict()
-                for k, v in self.model.state_dict.items():
+                for k, v in self.model.state_dict().items():
                     shapes[k] = v.shape.tolist()
                 shared_params["shapes"] = shapes
 
