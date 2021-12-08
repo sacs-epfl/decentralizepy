@@ -18,8 +18,8 @@ class Node:
 
     def save_plot(self, l, label, title, xlabel, filename):
         plt.clf()
-        x_axis = l.keys()
-        y_axis = [l[key] for key in x_axis]
+        y_axis = [l[key] for key in l.keys()]
+        x_axis = list(map(int, l.keys()))
         plt.plot(x_axis, y_axis, label=label)
         plt.xlabel(xlabel)
         plt.title(title)
