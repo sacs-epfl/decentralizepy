@@ -36,6 +36,7 @@ def plot(means, stdevs, mins, maxs, title, label, loc):
 
 def plot_results(path):
     folders = os.listdir(path)
+    folders.sort()
     print("Reading folders from: ", path)
     print("Folders: ", folders)
     for folder in folders:
@@ -103,4 +104,4 @@ def plot_parameters(path):
 if __name__ == "__main__":
     assert len(sys.argv) == 2
     plot_results(sys.argv[1])
-    plot_parameters(sys.argv[1])
+    # plot_parameters(sys.argv[1])
