@@ -7,23 +7,24 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn.functional as F
+from PIL import Image
 from torch import nn
 from torch.utils.data import DataLoader
 
+import decentralizepy.utils as utils
 from decentralizepy.datasets.Data import Data
 from decentralizepy.datasets.Dataset import Dataset
 from decentralizepy.datasets.Partitioner import DataPartitioner
 from decentralizepy.models.Model import Model
 
-NUM_CLASSES = 62
-IMAGE_SIZE = (28, 28)
-FLAT_SIZE = 28 * 28
-PIXEL_RANGE = 256.0
+IMAGE_DIM = 84
+CHANNELS = 3
+NUM_CLASSES = 2
 
 
-class Femnist(Dataset):
+class Celeba(Dataset):
     """
-    Class for the FEMNIST dataset
+    Class for the Celeba dataset
     """
 
     def __read_file__(self, file_path):
@@ -90,7 +91,8 @@ class Femnist(Dataset):
             self.sizes[-1] += 1.0 - frac * self.n_procs
             logging.debug("Size fractions: {}".format(self.sizes))
 
-        my_clients = DataPartitioner(files, self.sizes).use(self.rank)
+        self.uid = self.mapping.get_uid(self.rank, self.machine_id)
+        my_clients = DataPartitioner(files, self.sizes).use(self.uid)
         my_train_data = {"x": [], "y": []}
         self.clients = []
         self.num_samples = []
@@ -104,13 +106,13 @@ class Femnist(Dataset):
             )
             for cur_client in clients:
                 self.clients.append(cur_client)
-                my_train_data["x"].extend(train_data[cur_client]["x"])
+                my_train_data["x"].extend(self.process_x(train_data[cur_client]["x"]))
                 my_train_data["y"].extend(train_data[cur_client]["y"])
                 self.num_samples.append(len(train_data[cur_client]["y"]))
         self.train_x = (
             np.array(my_train_data["x"], dtype=np.dtype("float32"))
-            .reshape(-1, 28, 28, 1)
-            .transpose(0, 3, 1, 2)
+            .reshape(-1, IMAGE_DIM, IMAGE_DIM, CHANNELS)
+            .transpose(0, 3, 1, 2)  # Channel first: torch
         )
         self.train_y = np.array(my_train_data["y"], dtype=np.dtype("int64")).reshape(-1)
         logging.debug("train_x.shape: %s", str(self.train_x.shape))
@@ -124,13 +126,11 @@ class Femnist(Dataset):
         test_x = []
         test_y = []
         for test_data in d.values():
-            for x in test_data["x"]:
-                test_x.append(x)
-            for y in test_data["y"]:
-                test_y.append(y)
+            test_x.extend(self.process_x(test_data["x"]))
+            test_y.extend(test_data["y"])
         self.test_x = (
             np.array(test_x, dtype=np.dtype("float32"))
-            .reshape(-1, 28, 28, 1)
+            .reshape(-1, IMAGE_DIM, IMAGE_DIM, CHANNELS)
             .transpose(0, 3, 1, 2)
         )
         self.test_y = np.array(test_y, dtype=np.dtype("int64")).reshape(-1)
@@ -147,8 +147,9 @@ class Femnist(Dataset):
         n_procs="",
         train_dir="",
         test_dir="",
+        images_dir="",
         sizes="",
-        test_batch_size=1024,
+        test_batch_size=128,
     ):
         """
         Constructor which reads the data files, instantiates and partitions the dataset
@@ -177,6 +178,8 @@ class Femnist(Dataset):
             sizes,
             test_batch_size,
         )
+        self.IMAGES_DIR = utils.conditional_value(images_dir, "", None)
+        assert self.IMAGES_DIR != None
 
         if self.__training__:
             self.load_trainset()
@@ -185,6 +188,16 @@ class Femnist(Dataset):
             self.load_testset()
 
         # TODO: Add Validation
+
+    def process_x(self, raw_x_batch):
+        x_batch = [self._load_image(i) for i in raw_x_batch]
+        x_batch = np.array(x_batch)
+        return x_batch
+
+    def _load_image(self, img_name):
+        img = Image.open(os.path.join(self.IMAGES_DIR, img_name[:-4] + ".png"))
+        img = img.resize((IMAGE_DIM, IMAGE_DIM)).convert("RGB")
+        return np.array(img)
 
     def get_client_ids(self):
         """
@@ -304,49 +317,21 @@ class Femnist(Dataset):
         return accuracy, loss_val
 
 
-class LogisticRegression(Model):
-    """
-    Class for a Logistic Regression Neural Network for FEMNIST
-    """
-
-    def __init__(self):
-        """
-        Constructor. Instantiates the Logistic Regression Model
-            with 28*28 Input and 62 output classes
-        """
-        super().__init__()
-        self.fc1 = nn.Linear(FLAT_SIZE, NUM_CLASSES)
-
-    def forward(self, x):
-        """
-        Forward pass of the model
-        Parameters
-        ----------
-        x : torch.tensor
-            The input torch tensor
-        Returns
-        -------
-        torch.tensor
-            The output torch tensor
-        """
-        x = torch.flatten(x, start_dim=1)
-        x = self.fc1(x)
-        return x
-
-
 class CNN(Model):
     def __init__(self):
         super().__init__()
-        self.conv1 = nn.Conv2d(1, 32, 5, padding=2)
+        self.conv1 = nn.Conv2d(CHANNELS, 32, 3, padding="same")
         self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(32, 64, 5, padding=2)
-        self.fc1 = nn.Linear(7 * 7 * 64, 512)
-        self.fc2 = nn.Linear(512, NUM_CLASSES)
+        self.conv2 = nn.Conv2d(32, 32, 3, padding="same")
+        self.conv3 = nn.Conv2d(32, 32, 3, padding="same")
+        self.conv4 = nn.Conv2d(32, 32, 3, padding="same")
+        self.fc1 = nn.Linear(5 * 5 * 32, NUM_CLASSES)
 
     def forward(self, x):
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
+        x = F.relu(self.pool(self.conv1(x)))
+        x = F.relu(self.pool(self.conv2(x)))
+        x = F.relu(self.pool(self.conv3(x)))
+        x = F.relu(self.pool(self.conv4(x)))
         x = torch.flatten(x, 1)
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
+        x = self.fc1(x)
         return x

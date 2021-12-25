@@ -9,6 +9,7 @@ class Communication:
         self.machine_id = machine_id
         self.mapping = mapping
         self.uid = mapping.get_uid(rank, machine_id)
+        self.total_bytes = 0
 
     def encrypt(self, data):
         raise NotImplementedError

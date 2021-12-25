@@ -9,7 +9,9 @@ class Dataset:
 
     def __init__(
         self,
-        rank="",
+        rank,
+        machine_id,
+        mapping,
         n_procs="",
         train_dir="",
         test_dir="",
@@ -33,7 +35,9 @@ class Dataset:
             A list of fractions specifying how much data to alot each process. Sum of fractions should be 1.0
             By default, each process gets an equal amount.
         """
-        self.rank = utils.conditional_value(rank, "", 0)
+        self.rank = rank
+        self.machine_id = machine_id
+        self.mapping = mapping
         self.n_procs = utils.conditional_value(n_procs, "", 1)
         self.train_dir = utils.conditional_value(train_dir, "", None)
         self.test_dir = utils.conditional_value(test_dir, "", None)

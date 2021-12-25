@@ -108,9 +108,12 @@ class TCP(Communication):
 
     def send(self, uid, data):
         to_send = self.encrypt(data)
+        data_size = len(to_send)
+        self.total_bytes += data_size
         id = str(uid).encode()
         self.peer_sockets[id].send(to_send)
         logging.debug("{} sent the message to {}.".format(self.uid, uid))
+        logging.info("Sent this round: {}".format(data_size))
 
     def disconnect_neighbors(self):
         if not self.sent_disconnections:

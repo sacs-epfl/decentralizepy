@@ -100,7 +100,9 @@ class Node:
         dataset_params = utils.remove_keys(
             dataset_configs, ["dataset_package", "dataset_class", "model_class"]
         )
-        self.dataset = dataset_class(rank, **dataset_params)
+        self.dataset = dataset_class(
+            self.rank, self.machine_id, self.mapping, **dataset_params
+        )
 
         logging.info("Dataset instantiation complete.")
 
@@ -193,9 +195,15 @@ class Node:
                 ) as inf:
                     results_dict = json.load(inf)
             else:
-                results_dict = {"train_loss": {}, "test_loss": {}, "test_acc": {}}
+                results_dict = {
+                    "train_loss": {},
+                    "test_loss": {},
+                    "test_acc": {},
+                    "total_bytes": {},
+                }
 
             results_dict["train_loss"][iteration + 1] = loss_after_sharing
+            results_dict["total_bytes"][iteration + 1] = self.communication.total_bytes
 
             self.save_plot(
                 results_dict["train_loss"],
