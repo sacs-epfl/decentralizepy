@@ -39,26 +39,43 @@ def plot_results(path):
     folders.sort()
     print("Reading folders from: ", path)
     print("Folders: ", folders)
+    bytes_means, bytes_stdevs = {}, {}
     for folder in folders:
         folder_path = os.path.join(path, folder)
         if not os.path.isdir(folder_path):
             continue
         results = []
-        files = os.listdir(folder_path)
-        files = [f for f in files if f.endswith("_results.json")]
-        for f in files:
-            filepath = os.path.join(folder_path, f)
-            with open(filepath, "r") as inf:
-                results.append(json.load(inf))
+        machine_folders = os.listdir(folder_path)
+        for machine_folder in machine_folders:
+            mf_path = os.path.join(folder_path, machine_folder)
+            if not os.path.isdir(mf_path):
+                continue
+            files = os.listdir(mf_path)
+            files = [f for f in files if f.endswith("_results.json")]
+            for f in files:
+                filepath = os.path.join(mf_path, f)
+                with open(filepath, "r") as inf:
+                    results.append(json.load(inf))
+        # Plot Training loss
         plt.figure(1)
         means, stdevs, mins, maxs = get_stats([x["train_loss"] for x in results])
         plot(means, stdevs, mins, maxs, "Training Loss", folder, "upper right")
+        # Plot Testing loss
         plt.figure(2)
         means, stdevs, mins, maxs = get_stats([x["test_loss"] for x in results])
         plot(means, stdevs, mins, maxs, "Testing Loss", folder, "upper right")
+        # Plot Testing Accuracy
         plt.figure(3)
         means, stdevs, mins, maxs = get_stats([x["test_acc"] for x in results])
         plot(means, stdevs, mins, maxs, "Testing Accuracy", folder, "lower right")
+        # Collect total_bytes shared
+        bytes_list = []
+        for x in results:
+            max_key = str(max(list(map(int, x["total_bytes"].keys()))))
+            bytes_list.append({max_key: x["total_bytes"][max_key]})
+        means, stdevs, mins, maxs = get_stats(bytes_list)
+        bytes_means[folder] = list(means.values())[0]
+        bytes_stdevs[folder] = list(stdevs.values())[0]
 
     plt.figure(1)
     plt.savefig(os.path.join(path, "train_loss.png"))
@@ -66,6 +83,20 @@ def plot_results(path):
     plt.savefig(os.path.join(path, "test_loss.png"))
     plt.figure(3)
     plt.savefig(os.path.join(path, "test_acc.png"))
+    # Plot total_bytes
+    plt.figure(4)
+    plt.title("Data Shared")
+    x_pos = np.arange(len(bytes_means.keys()))
+    plt.bar(
+        x_pos,
+        np.array(list(bytes_means.values())) // (1024 * 1024),
+        yerr=np.array(list(bytes_stdevs.values())) // (1024 * 1024),
+        align="center",
+    )
+    plt.ylabel("Total data shared in MBs")
+    plt.xlabel("Fraction of Model Shared")
+    plt.xticks(x_pos, list(bytes_means.keys()))
+    plt.savefig(os.path.join(path, "data_shared.png"))
 
 
 def plot_parameters(path):

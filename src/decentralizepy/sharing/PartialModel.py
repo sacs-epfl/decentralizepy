@@ -22,6 +22,7 @@ class PartialModel(Sharing):
         log_dir,
         alpha=1.0,
         dict_ordered=True,
+        save_shared=False,
     ):
         super().__init__(
             rank, machine_id, communication, mapping, graph, model, dataset, log_dir
@@ -29,10 +30,17 @@ class PartialModel(Sharing):
         self.alpha = alpha
         self.dict_ordered = dict_ordered
         self.communication_round = 0
-        self.folder_path = os.path.join(
-            self.log_dir, "shared_params/{}".format(self.rank)
-        )
-        Path(self.folder_path).mkdir(parents=True, exist_ok=True)
+        self.save_shared = save_shared
+
+        # Only save for 2 procs
+        if rank == 0 or rank == 1:
+            self.save_shared = True
+
+        if self.save_shared:
+            self.folder_path = os.path.join(
+                self.log_dir, "shared_params/{}".format(self.rank)
+            )
+            Path(self.folder_path).mkdir(parents=True, exist_ok=True)
 
     def extract_top_gradients(self):
         logging.info("Summing up gradients")
@@ -53,23 +61,24 @@ class PartialModel(Sharing):
         with torch.no_grad():
             _, G_topk = self.extract_top_gradients()
 
-            shared_params = dict()
-            shared_params["order"] = list(self.model.state_dict().keys())
-            shapes = dict()
-            for k, v in self.model.state_dict().items():
-                shapes[k] = list(v.shape)
-            shared_params["shapes"] = shapes
+            if self.save_shared:
+                shared_params = dict()
+                shared_params["order"] = list(self.model.state_dict().keys())
+                shapes = dict()
+                for k, v in self.model.state_dict().items():
+                    shapes[k] = list(v.shape)
+                shared_params["shapes"] = shapes
 
-            shared_params[self.communication_round] = G_topk.tolist()
+                shared_params[self.communication_round] = G_topk.tolist()
 
-            with open(
-                os.path.join(
-                    self.folder_path,
-                    "{}_shared_params.json".format(self.communication_round + 1),
-                ),
-                "w",
-            ) as of:
-                json.dump(shared_params, of)
+                with open(
+                    os.path.join(
+                        self.folder_path,
+                        "{}_shared_params.json".format(self.communication_round + 1),
+                    ),
+                    "w",
+                ) as of:
+                    json.dump(shared_params, of)
 
             logging.info("Extracting topk params")
 
