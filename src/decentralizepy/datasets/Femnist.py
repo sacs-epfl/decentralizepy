@@ -337,6 +337,7 @@ class LogisticRegression(Model):
 class CNN(Model):
     def __init__(self):
         super().__init__()
+        # 1.6 million params
         self.conv1 = nn.Conv2d(1, 32, 5, padding=2)
         self.pool = nn.MaxPool2d(2, 2)
         self.conv2 = nn.Conv2d(32, 64, 5, padding=2)

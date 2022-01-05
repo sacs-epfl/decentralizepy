@@ -29,7 +29,6 @@ class PartialModel(Sharing):
         )
         self.alpha = alpha
         self.dict_ordered = dict_ordered
-        self.communication_round = 0
         self.save_shared = save_shared
 
         # Only save for 2 procs
@@ -105,8 +104,6 @@ class PartialModel(Sharing):
                 m[key] = json.dumps(m[key])
 
             logging.info("Converted dictionary to json")
-
-            self.communication_round += 1
 
             return m
 

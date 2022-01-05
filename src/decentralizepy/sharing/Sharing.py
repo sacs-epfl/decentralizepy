@@ -23,6 +23,7 @@ class Sharing:
         self.model = model
         self.dataset = dataset
         self.log_dir = log_dir
+        self.communication_round = 0
 
         self.peer_deques = dict()
         my_neighbors = self.graph.neighbors(self.uid)
@@ -89,3 +90,5 @@ class Sharing:
         self.model.load_state_dict(total)
 
         logging.info("Model averaging complete")
+
+        self.communication_round += 1
