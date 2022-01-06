@@ -27,6 +27,8 @@ class Training:
             Number of epochs per training call
         batch_size : int, optional
             Number of items to learn over, in one batch
+        shuffle : bool
+            True if the dataset should be shuffled before training. Not implemented yet! TODO
         """
         self.model = model
         self.optimizer = optimizer
@@ -36,11 +38,18 @@ class Training:
         self.shuffle = utils.conditional_value(shuffle, "", False)
 
     def reset_optimizer(self, optimizer):
+        """
+        Replace the current optimizer with a new one
+        Parameters
+        ----------
+        optimizer : torch.optim
+            A new optimizer
+        """
         self.optimizer = optimizer
 
     def eval_loss(self, dataset):
         """
-        Evaluate the loss
+        Evaluate the loss on the training set
         Parameters
         ----------
         dataset : decentralizepy.datasets.Dataset
@@ -61,7 +70,7 @@ class Training:
 
     def train(self, dataset):
         """
-        One training iteration
+        One training iteration, goes through the entire dataset
         Parameters
         ----------
         dataset : decentralizepy.datasets.Dataset

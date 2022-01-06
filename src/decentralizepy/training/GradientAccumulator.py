@@ -7,11 +7,29 @@ class GradientAccumulator(Training):
     def __init__(
         self, model, optimizer, loss, epochs_per_round="", batch_size="", shuffle=""
     ):
+        """
+        Constructor
+        Parameters
+        ----------
+        model : torch.nn.Module
+            Neural Network for training
+        optimizer : torch.optim
+            Optimizer to learn parameters
+        loss : function
+            Loss function
+        epochs_per_round : int, optional
+            Number of epochs per training call
+        batch_size : int, optional
+            Number of items to learn over, in one batch
+        shuffle : bool
+            True if the dataset should be shuffled before training. Not implemented yet! TODO
+        """
         super().__init__(model, optimizer, loss, epochs_per_round, batch_size, shuffle)
 
     def train(self, dataset):
         """
-        One training iteration with accumulation of gradients in model.accumulated_gradients
+        One training iteration with accumulation of gradients in model.accumulated_gradients.
+        Goes through the entire dataset.
         Parameters
         ----------
         dataset : decentralizepy.datasets.Dataset

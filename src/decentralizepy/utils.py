@@ -5,6 +5,21 @@ import os
 
 
 def conditional_value(var, nul, default):
+    """
+    Set the value to default if nul.
+    Parameters
+    ----------
+    var : any
+        The value
+    nul : any
+        The null value. Assigns default if var == nul
+    default : any
+        The default value
+    Returns
+    -------
+    type(var)
+        The final value
+    """
     if var != nul:
         return var
     else:
@@ -12,10 +27,30 @@ def conditional_value(var, nul, default):
 
 
 def remove_keys(d, keys_to_remove):
+    """
+    Removes given keys from the dict. Returns a new list.
+    Parameters
+    ----------
+    d : dict
+        The initial dictionary
+    keys_to_remove : list
+        List of keys to remove from dict
+    Returns
+    -------
+    dict
+        A new dictionary with the given keys removed.
+    """
     return {key: d[key] for key in d if key not in keys_to_remove}
 
 
 def get_args():
+    """
+    Utility to parse arguments.
+    Returns
+    -------
+    args
+        Command line arguments
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("-mid", "--machine_id", type=int, default=0)
     parser.add_argument("-ps", "--procs_per_machine", type=int, default=1)
@@ -38,6 +73,15 @@ def get_args():
 
 
 def write_args(args, path):
+    """
+    Write arguments to a json file
+    Parameters
+    ----------
+    args : args
+        Command line args
+    path : str
+        Location of the file to write to
+    """
     data = {
         "machine_id": args.machine_id,
         "procs_per_machine": args.procs_per_machine,

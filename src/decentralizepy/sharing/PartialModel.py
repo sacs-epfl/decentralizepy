@@ -23,9 +23,31 @@ class PartialModel(Sharing):
         dict_ordered=True,
         save_shared=False,
     ):
+        """
+        Constructor
+        Parameters
+        ----------
+        rank : int
+            Local rank
+        machine_id : int
+            Global machine id
+        communication : decentralizepy.communication.Communication
+            Communication module used to send and receive messages
+        mapping : decentralizepy.mappings.Mapping
+            Mapping (rank, machine_id) -> uid
+        graph : decentralizepy.graphs.Graph
+            Graph reprensenting neighbors
+        model : decentralizepy.models.Model
+            Model to train
+        dataset : decentralizepy.datasets.Dataset
+            Dataset for sharing data. Not implemented yer! TODO
+        log_dir : str
+            Location to write shared_params (only writing for 2 procs per machine)
+        """
         super().__init__(
-            rank, machine_id, communication, mapping, graph, model, dataset, log_dir
+            rank, machine_id, communication, mapping, graph, model, dataset
         )
+        self.log_dir = log_dir
         self.alpha = alpha
         self.dict_ordered = dict_ordered
         self.save_shared = save_shared

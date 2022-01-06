@@ -11,9 +11,28 @@ class Sharing:
     API defining who to share with and what, and what to do on receiving
     """
 
-    def __init__(
-        self, rank, machine_id, communication, mapping, graph, model, dataset, log_dir
-    ):
+    def __init__(self, rank, machine_id, communication, mapping, graph, model, dataset):
+        """
+        Constructor
+        Parameters
+        ----------
+        rank : int
+            Local rank
+        machine_id : int
+            Global machine id
+        communication : decentralizepy.communication.Communication
+            Communication module used to send and receive messages
+        mapping : decentralizepy.mappings.Mapping
+            Mapping (rank, machine_id) -> uid
+        graph : decentralizepy.graphs.Graph
+            Graph reprensenting neighbors
+        model : decentralizepy.models.Model
+            Model to train
+        dataset : decentralizepy.datasets.Dataset
+            Dataset for sharing data. Not implemented yer! TODO
+        log_dir : str
+            Location to write shared_params (only writing for 2 procs per machine)
+        """
         self.rank = rank
         self.machine_id = machine_id
         self.uid = mapping.get_uid(rank, machine_id)
@@ -22,7 +41,6 @@ class Sharing:
         self.graph = graph
         self.model = model
         self.dataset = dataset
-        self.log_dir = log_dir
         self.communication_round = 0
 
         self.peer_deques = dict()
@@ -31,22 +49,58 @@ class Sharing:
             self.peer_deques[n] = deque()
 
     def received_from_all(self):
+        """
+        Check if all neighbors have sent the current iteration
+        Returns
+        -------
+        bool
+            True if required data has been received, False otherwise
+        """
         for _, i in self.peer_deques.items():
             if len(i) == 0:
                 return False
         return True
 
     def get_neighbors(self, neighbors):
+        """
+        Choose which neighbors to share with
+        Parameters
+        ----------
+        neighbors : list(int)
+            List of all neighbors
+        Returns
+        -------
+        list(int)
+            Neighbors to share with
+        """
         # modify neighbors here
         return neighbors
 
     def serialized_model(self):
+        """
+        Convert model to json dict. Here we can choose how much to share
+        Returns
+        -------
+        dict
+            Model converted to json dict
+        """
         m = dict()
         for key, val in self.model.state_dict().items():
             m[key] = json.dumps(val.numpy().tolist())
         return m
 
     def deserialized_model(self, m):
+        """
+        Convert received json dict to state_dict.
+        Parameters
+        ----------
+        m : dict
+            json dict received
+        Returns
+        -------
+        state_dict
+            state_dict of received
+        """
         state_dict = dict()
         for key, value in m.items():
             state_dict[key] = torch.from_numpy(numpy.array(json.loads(value)))
@@ -67,7 +121,7 @@ class Sharing:
             logging.debug("Received model from {}".format(sender))
             degree = data["degree"]
             del data["degree"]
-            self.peer_deques[sender].append((degree, self.deserialized_model(data)))
+            self.peer_deques[sender].append((degree, data))
             logging.debug("Deserialized received model from {}".format(sender))
 
         logging.info("Starting model averaging after receiving from all neighbors")
@@ -76,6 +130,7 @@ class Sharing:
         for i, n in enumerate(self.peer_deques):
             logging.debug("Averaging model from neighbor {}".format(i))
             degree, data = self.peer_deques[n].popleft()
+            data = self.deserialized_model(data)
             weight = 1 / (max(len(self.peer_deques), degree) + 1)  # Metro-Hastings
             weight_total += weight
             for key, value in data.items():

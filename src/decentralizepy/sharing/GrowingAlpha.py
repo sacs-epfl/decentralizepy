@@ -60,7 +60,6 @@ class GrowingAlpha(PartialModel):
                     self.graph,
                     self.model,
                     self.dataset,
-                    self.log_dir,
                 )
                 self.base.communication_round = self.communication_round
             self.base.step()
