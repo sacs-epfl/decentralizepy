@@ -1,7 +1,5 @@
 import logging
 
-import matplotlib.pyplot as plt
-import numpy as np
 import torch
 
 from decentralizepy import utils

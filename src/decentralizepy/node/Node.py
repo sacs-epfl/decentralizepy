@@ -6,7 +6,6 @@ import os
 from matplotlib import pyplot as plt
 
 from decentralizepy import utils
-from decentralizepy.communication.Communication import Communication
 from decentralizepy.graphs.Graph import Graph
 from decentralizepy.mappings.Mapping import Mapping
 
