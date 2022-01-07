@@ -242,3 +242,4 @@ class Node:
                 json.dump(results_dict, of)
 
         self.communication.disconnect_neighbors()
+        logging.info("All neighbors disconnected. Process complete!")
