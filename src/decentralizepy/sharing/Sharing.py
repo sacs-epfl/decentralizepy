@@ -124,7 +124,7 @@ class Sharing:
             iteration = data["iteration"]
             del data["degree"]
             del data["iteration"]
-            self.peer_deques[sender].append((degree, data))
+            self.peer_deques[sender].append((degree, iteration, data))
             logging.info(
                 "Deserialized received model from {} of iteration {}".format(
                     sender, iteration
@@ -135,8 +135,10 @@ class Sharing:
         total = dict()
         weight_total = 0
         for i, n in enumerate(self.peer_deques):
-            logging.debug("Averaging model from neighbor {}".format(i))
-            degree, data = self.peer_deques[n].popleft()
+            degree, iteration, data = self.peer_deques[n].popleft()
+            logging.debug(
+                "Averaging model from neighbor {} of iteration {}".format(i, iteration)
+            )
             data = self.deserialized_model(data)
             weight = 1 / (max(len(self.peer_deques), degree) + 1)  # Metro-Hastings
             weight_total += weight
