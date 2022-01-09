@@ -112,6 +112,7 @@ class Sharing:
         all_neighbors = self.graph.neighbors(my_uid)
         iter_neighbors = self.get_neighbors(all_neighbors)
         data["degree"] = len(all_neighbors)
+        data["iteration"] = self.communication_round
         for neighbor in iter_neighbors:
             self.communication.send(neighbor, data)
 
@@ -120,9 +121,15 @@ class Sharing:
             sender, data = self.communication.receive()
             logging.debug("Received model from {}".format(sender))
             degree = data["degree"]
+            iteration = data["iteration"]
             del data["degree"]
+            del data["iteration"]
             self.peer_deques[sender].append((degree, data))
-            logging.debug("Deserialized received model from {}".format(sender))
+            logging.info(
+                "Deserialized received model from {} of iteration {}".format(
+                    sender, iteration
+                )
+            )
 
         logging.info("Starting model averaging after receiving from all neighbors")
         total = dict()
