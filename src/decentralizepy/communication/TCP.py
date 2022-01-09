@@ -87,8 +87,7 @@ class TCP(Communication):
 
     def receive(self):
         if len(self.peer_deque) != 0:
-            resp = self.peer_deque[0]
-            self.peer_deque.popleft()
+            resp = self.peer_deque.popleft()
             return resp
 
         sender, recv = self.router.recv_multipart()

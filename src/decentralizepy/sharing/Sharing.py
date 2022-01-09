@@ -137,7 +137,7 @@ class Sharing:
         for i, n in enumerate(self.peer_deques):
             degree, iteration, data = self.peer_deques[n].popleft()
             logging.debug(
-                "Averaging model from neighbor {} of iteration {}".format(i, iteration)
+                "Averaging model from neighbor {} of iteration {}".format(n, iteration)
             )
             data = self.deserialized_model(data)
             weight = 1 / (max(len(self.peer_deques), degree) + 1)  # Metro-Hastings
