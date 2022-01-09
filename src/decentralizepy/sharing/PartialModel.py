@@ -22,6 +22,7 @@ class PartialModel(Sharing):
         alpha=1.0,
         dict_ordered=True,
         save_shared=False,
+        metadata_cap=1.0,
     ):
         """
         Constructor
@@ -51,6 +52,7 @@ class PartialModel(Sharing):
         self.alpha = alpha
         self.dict_ordered = dict_ordered
         self.save_shared = save_shared
+        self.metadata_cap = metadata_cap
 
         # Only save for 2 procs
         if rank == 0 or rank == 1:
@@ -78,6 +80,9 @@ class PartialModel(Sharing):
         )
 
     def serialized_model(self):
+        if self.alpha > self.metadata_cap:  # Share fully
+            return super().serialized_model()
+
         with torch.no_grad():
             _, G_topk = self.extract_top_gradients()
 
@@ -129,6 +134,9 @@ class PartialModel(Sharing):
             return m
 
     def deserialized_model(self, m):
+        if self.alpha > self.metadata_cap:  # Share fully
+            return super().deserialized_model(m)
+
         with torch.no_grad():
             state_dict = self.model.state_dict()
 
