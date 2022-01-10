@@ -4,7 +4,6 @@ import sys
 
 import numpy as np
 from matplotlib import pyplot as plt
-from numpy.core.numeric import indices
 
 
 def get_stats(l):
