@@ -41,14 +41,13 @@ class PartialModel(Sharing):
         model : decentralizepy.models.Model
             Model to train
         dataset : decentralizepy.datasets.Dataset
-            Dataset for sharing data. Not implemented yer! TODO
+            Dataset for sharing data. Not implemented yet! TODO
         log_dir : str
             Location to write shared_params (only writing for 2 procs per machine)
         """
         super().__init__(
-            rank, machine_id, communication, mapping, graph, model, dataset
+            rank, machine_id, communication, mapping, graph, model, dataset, log_dir
         )
-        self.log_dir = log_dir
         self.alpha = alpha
         self.dict_ordered = dict_ordered
         self.save_shared = save_shared
