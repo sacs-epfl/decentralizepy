@@ -37,7 +37,7 @@ class Training:
         batch_size : int, optional
             Number of items to learn over, in one batch
         shuffle : bool
-            True if the dataset should be shuffled before training. Not implemented yet! TODO
+            True if the dataset should be shuffled before training.
         """
         self.model = model
         self.optimizer = optimizer
