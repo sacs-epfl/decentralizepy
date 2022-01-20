@@ -5,7 +5,14 @@ from decentralizepy.training.Training import Training
 
 class GradientAccumulator(Training):
     def __init__(
-        self, model, optimizer, loss, rounds="", full_epochs="", batch_size="", shuffle=""
+        self,
+        model,
+        optimizer,
+        loss,
+        rounds="",
+        full_epochs="",
+        batch_size="",
+        shuffle="",
     ):
         """
         Constructor
@@ -24,7 +31,9 @@ class GradientAccumulator(Training):
         shuffle : bool
             True if the dataset should be shuffled before training.
         """
-        super().__init__(model, optimizer, loss, rounds, full_epochs, batch_size, shuffle)
+        super().__init__(
+            model, optimizer, loss, rounds, full_epochs, batch_size, shuffle
+        )
 
     def trainstep(self, data, target):
         """
