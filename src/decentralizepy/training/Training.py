@@ -11,7 +11,14 @@ class Training:
     """
 
     def __init__(
-        self, model, optimizer, loss, epochs_per_round="", batch_size="", shuffle=""
+        self,
+        model,
+        optimizer,
+        loss,
+        rounds="",
+        full_epochs="",
+        batch_size="",
+        shuffle="",
     ):
         """
         Constructor
@@ -23,8 +30,10 @@ class Training:
             Optimizer to learn parameters
         loss : function
             Loss function
-        epochs_per_round : int, optional
-            Number of epochs per training call
+        rounds : int, optional
+            Number of steps/epochs per training call
+        full_epochs: bool, optional
+            True if 1 round = 1 epoch. False if 1 round = 1 minibatch
         batch_size : int, optional
             Number of items to learn over, in one batch
         shuffle : bool
@@ -33,7 +42,8 @@ class Training:
         self.model = model
         self.optimizer = optimizer
         self.loss = loss
-        self.epochs_per_round = utils.conditional_value(epochs_per_round, "", int(1))
+        self.rounds = utils.conditional_value(rounds, "", int(1))
+        self.full_epochs = utils.conditional_value(full_epochs, "", False)
         self.batch_size = utils.conditional_value(batch_size, "", int(1))
         self.shuffle = utils.conditional_value(shuffle, "", False)
 
@@ -68,9 +78,46 @@ class Training:
         logging.info("Loss after iteration: {}".format(loss))
         return loss
 
-    def train(self, dataset):
+    def trainstep(self, data, target):
+        """
+        One training step on a minibatch.
+        Parameters
+        ----------
+        data : any
+            Data item
+        target : any
+            Label
+        Returns
+        -------
+        int
+            Loss Value for the step
+        """
+        self.model.zero_grad()
+        output = self.model(data)
+        loss_val = self.loss(output, target)
+        loss_val.backward()
+        self.optimizer.step()
+        return loss_val.item()
+
+    def train_full(self, trainset):
         """
         One training iteration, goes through the entire dataset
+        Parameters
+        ----------
+        trainset : torch.utils.data.Dataloader
+            The training dataset.
+        """
+        for epoch in range(self.epochs_per_round):
+            epoch_loss = 0.0
+            count = 0
+            for data, target in trainset:
+                epoch_loss += self.trainstep(data, target)
+                count += 1
+            logging.info("Epoch: {} loss: {}".format(epoch, epoch_loss / count))
+
+    def train(self, dataset):
+        """
+        One training iteration
         Parameters
         ----------
         dataset : decentralizepy.datasets.Dataset
@@ -78,15 +125,14 @@ class Training:
         """
         trainset = dataset.get_trainset(self.batch_size, self.shuffle)
 
-        for epoch in range(self.epochs_per_round):
-            epoch_loss = 0.0
+        if self.full_epochs:
+            self.train_full(trainset)
+        else:
+            iter_loss = 0.0
             count = 0
             for data, target in trainset:
-                self.model.zero_grad()
-                output = self.model(data)
-                loss_val = self.loss(output, target)
-                epoch_loss += loss_val.item()
-                loss_val.backward()
-                self.optimizer.step()
+                iter_loss += self.trainstep(data, target)
                 count += 1
-            logging.info("Epoch: {} loss: {}".format(epoch, epoch_loss / count))
+                logging.info("Round: {} loss: {}".format(count, iter_loss / count))
+                if count >= self.rounds:
+                    break
