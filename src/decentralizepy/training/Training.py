@@ -107,7 +107,7 @@ class Training:
         trainset : torch.utils.data.Dataloader
             The training dataset.
         """
-        for epoch in range(self.epochs_per_round):
+        for epoch in range(self.rounds):
             epoch_loss = 0.0
             count = 0
             for data, target in trainset:
@@ -130,9 +130,10 @@ class Training:
         else:
             iter_loss = 0.0
             count = 0
-            for data, target in trainset:
-                iter_loss += self.trainstep(data, target)
-                count += 1
-                logging.info("Round: {} loss: {}".format(count, iter_loss / count))
-                if count >= self.rounds:
-                    break
+            while count < self.rounds:
+                for data, target in trainset:
+                    iter_loss += self.trainstep(data, target)
+                    count += 1
+                    logging.info("Round: {} loss: {}".format(count, iter_loss / count))
+                    if count >= self.rounds:
+                        break

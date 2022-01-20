@@ -26,6 +26,50 @@ class GradientAccumulator(Training):
         """
         super().__init__(model, optimizer, loss, epochs_per_round, batch_size, shuffle)
 
+    def trainstep(self, data, target):
+        """
+        One training step on a minibatch.
+        Parameters
+        ----------
+        data : any
+            Data item
+        target : any
+            Label
+        Returns
+        -------
+        int
+            Loss Value for the step
+        """
+        self.model.zero_grad()
+        output = self.model(data)
+        loss_val = self.loss(output, target)
+        loss_val.backward()
+        logging.debug("Accumulating Gradients")
+        self.model.accumulated_gradients.append(
+            {
+                k: v.grad.clone().detach()
+                for k, v in zip(self.model.state_dict(), self.model.parameters())
+            }
+        )
+        self.optimizer.step()
+        return loss_val.item()
+
+    def train_full(self, trainset):
+        """
+        One training iteration, goes through the entire dataset
+        Parameters
+        ----------
+        trainset : torch.utils.data.Dataloader
+            The training dataset.
+        """
+        for epoch in range(self.rounds):
+            epoch_loss = 0.0
+            count = 0
+            for data, target in trainset:
+                epoch_loss += self.trainstep(data, target)
+                count += 1
+            logging.info("Epoch: {} loss: {}".format(epoch, epoch_loss / count))
+
     def train(self, dataset):
         """
         One training iteration with accumulation of gradients in model.accumulated_gradients.
@@ -35,26 +79,5 @@ class GradientAccumulator(Training):
         dataset : decentralizepy.datasets.Dataset
             The training dataset. Should implement get_trainset(batch_size, shuffle)
         """
-        trainset = dataset.get_trainset(self.batch_size, self.shuffle)
         self.model.accumulated_gradients = []
-
-        for epoch in range(self.epochs_per_round):
-            epoch_loss = 0.0
-            count = 0
-            for data, target in trainset:
-                self.model.zero_grad()
-                output = self.model(data)
-                loss_val = self.loss(output, target)
-                epoch_loss += loss_val.item()
-                loss_val.backward()
-                self.model.accumulated_gradients.append(
-                    {
-                        k: v.grad.clone().detach()
-                        for k, v in zip(
-                            self.model.state_dict(), self.model.parameters()
-                        )
-                    }
-                )
-                self.optimizer.step()
-                count += 1
-            logging.info("Epoch: {} loss: {}".format(epoch, epoch_loss / count))
+        super().train(dataset)
