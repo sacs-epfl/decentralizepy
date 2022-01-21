@@ -8,6 +8,7 @@ from decentralizepy import utils
 class Training:
     """
     This class implements the training module for a single node.
+
     """
 
     def __init__(
@@ -22,6 +23,7 @@ class Training:
     ):
         """
         Constructor
+
         Parameters
         ----------
         model : torch.nn.Module
@@ -38,6 +40,7 @@ class Training:
             Number of items to learn over, in one batch
         shuffle : bool
             True if the dataset should be shuffled before training.
+
         """
         self.model = model
         self.optimizer = optimizer
@@ -50,20 +53,24 @@ class Training:
     def reset_optimizer(self, optimizer):
         """
         Replace the current optimizer with a new one
+
         Parameters
         ----------
         optimizer : torch.optim
             A new optimizer
+
         """
         self.optimizer = optimizer
 
     def eval_loss(self, dataset):
         """
         Evaluate the loss on the training set
+
         Parameters
         ----------
         dataset : decentralizepy.datasets.Dataset
             The training dataset. Should implement get_trainset(batch_size, shuffle)
+
         """
         trainset = dataset.get_trainset(self.batch_size, self.shuffle)
         epoch_loss = 0.0
@@ -81,16 +88,19 @@ class Training:
     def trainstep(self, data, target):
         """
         One training step on a minibatch.
+
         Parameters
         ----------
         data : any
             Data item
         target : any
             Label
+
         Returns
         -------
         int
             Loss Value for the step
+
         """
         self.model.zero_grad()
         output = self.model(data)
@@ -102,10 +112,12 @@ class Training:
     def train_full(self, trainset):
         """
         One training iteration, goes through the entire dataset
+
         Parameters
         ----------
         trainset : torch.utils.data.Dataloader
             The training dataset.
+
         """
         for epoch in range(self.rounds):
             epoch_loss = 0.0
@@ -118,10 +130,12 @@ class Training:
     def train(self, dataset):
         """
         One training iteration
+
         Parameters
         ----------
         dataset : decentralizepy.datasets.Dataset
             The training dataset. Should implement get_trainset(batch_size, shuffle)
+
         """
         trainset = dataset.get_trainset(self.batch_size, self.shuffle)
 

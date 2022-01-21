@@ -4,6 +4,10 @@ from decentralizepy.training.Training import Training
 
 
 class GradientAccumulator(Training):
+    """
+    This class implements the training module which also accumulates gradients of steps in a list.
+
+    """
     def __init__(
         self,
         model,
@@ -16,6 +20,7 @@ class GradientAccumulator(Training):
     ):
         """
         Constructor
+
         Parameters
         ----------
         model : torch.nn.Module
@@ -24,12 +29,15 @@ class GradientAccumulator(Training):
             Optimizer to learn parameters
         loss : function
             Loss function
-        epochs_per_round : int, optional
-            Number of epochs per training call
+        rounds : int, optional
+            Number of steps/epochs per training call
+        full_epochs: bool, optional
+            True if 1 round = 1 epoch. False if 1 round = 1 minibatch
         batch_size : int, optional
             Number of items to learn over, in one batch
         shuffle : bool
             True if the dataset should be shuffled before training.
+
         """
         super().__init__(
             model, optimizer, loss, rounds, full_epochs, batch_size, shuffle
@@ -38,16 +46,19 @@ class GradientAccumulator(Training):
     def trainstep(self, data, target):
         """
         One training step on a minibatch.
+
         Parameters
         ----------
         data : any
             Data item
         target : any
             Label
+
         Returns
         -------
         int
             Loss Value for the step
+
         """
         self.model.zero_grad()
         output = self.model(data)
@@ -66,10 +77,12 @@ class GradientAccumulator(Training):
     def train_full(self, trainset):
         """
         One training iteration, goes through the entire dataset
+
         Parameters
         ----------
         trainset : torch.utils.data.Dataloader
             The training dataset.
+
         """
         for epoch in range(self.rounds):
             epoch_loss = 0.0
@@ -83,10 +96,12 @@ class GradientAccumulator(Training):
         """
         One training iteration with accumulation of gradients in model.accumulated_gradients.
         Goes through the entire dataset.
+
         Parameters
         ----------
         dataset : decentralizepy.datasets.Dataset
             The training dataset. Should implement get_trainset(batch_size, shuffle)
+
         """
         self.model.accumulated_gradients = []
         super().train(dataset)

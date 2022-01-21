@@ -1,5 +1,20 @@
+==============
 decentralizepy
 ==============
+
+-------------------------
+Setting up decentralizepy
+-------------------------
+
+* Fork the repository.
+* Clone and enter your local repository.
+* Check if you have python >= 3.8.
+* (Optional) Create and activate a virtual environment.
+* Update pip::
+    pip3 install --upgrade pip
+    pip install --upgrade pip
+* Install decentralizepy for development::
+    pip3 install --editable .\[dev\]
 
 Node
 ----
@@ -28,3 +43,7 @@ Sharing
 Communication
 -------------
 * IPC/Network level. Compression. Privacy. Reliability
+
+Model
+-----
+* Learning Model

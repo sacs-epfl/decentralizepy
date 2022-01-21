@@ -25,9 +25,24 @@ NUM_CLASSES = 2
 class Celeba(Dataset):
     """
     Class for the Celeba dataset
+
     """
 
     def __read_file__(self, file_path):
+        """
+        Read data from the given json file
+
+        Parameters
+        ----------
+        file_path : str
+            The file path
+
+        Returns
+        -------
+        tuple
+            (users, num_samples, data)
+
+        """
         with open(file_path, "r") as inf:
             client_data = json.load(inf)
         return (
@@ -39,15 +54,18 @@ class Celeba(Dataset):
     def __read_dir__(self, data_dir):
         """
         Function to read all the FEMNIST data files in the directory
+
         Parameters
         ----------
         data_dir : str
             Path to the folder containing the data files
+
         Returns
         -------
         3-tuple
             A tuple containing list of clients, number of samples per client,
             and the data items per client
+
         """
         clients = []
         num_samples = []
@@ -64,6 +82,17 @@ class Celeba(Dataset):
         return clients, num_samples, data
 
     def file_per_user(self, dir, write_dir):
+        """
+        Function to read all the FEMNIST data files and write one file per user
+
+        Parameters
+        ----------
+        dir : str
+            Path to the folder containing the data files
+        write_dir : str
+            Path to the folder to write the files
+
+        """
         clients, num_samples, train_data = self.__read_dir__(dir)
         for index, client in enumerate(clients):
             my_data = dict()
@@ -76,6 +105,10 @@ class Celeba(Dataset):
                 print("Created File: ", client + ".json")
 
     def load_trainset(self):
+        """
+        Loads the training set. Partitions it if needed.
+
+        """
         logging.info("Loading training set.")
         files = os.listdir(self.train_dir)
         files = [f for f in files if f.endswith(".json")]
@@ -121,6 +154,10 @@ class Celeba(Dataset):
         assert self.train_x.shape[0] > 0
 
     def load_testset(self):
+        """
+        Loads the testing set.
+
+        """
         logging.info("Loading testing set.")
         _, _, d = self.__read_dir__(self.test_dir)
         test_x = []
@@ -153,10 +190,15 @@ class Celeba(Dataset):
     ):
         """
         Constructor which reads the data files, instantiates and partitions the dataset
+
         Parameters
         ----------
         rank : int
-            Rank of the current process (to get the partition). Default value is assigned 0
+            Rank of the current process (to get the partition).
+        machine_id : int
+            Machine ID
+        mapping : decentralizepy.mappings.Mapping
+            Mapping to conver rank, machine_id -> uid for data partitioning
         n_procs : int, optional
             The number of processes among which to divide the data. Default value is assigned 1
         train_dir : str, optional
@@ -167,6 +209,9 @@ class Celeba(Dataset):
         sizes : list(int), optional
             A list of fractions specifying how much data to alot each process. Sum of fractions should be 1.0
             By default, each process gets an equal amount.
+        test_batch_size : int, optional
+            Batch size during testing. Default value is 64
+
         """
         super().__init__(
             rank,
@@ -190,11 +235,29 @@ class Celeba(Dataset):
         # TODO: Add Validation
 
     def process_x(self, raw_x_batch):
+        """
+        Preprocesses the whole batch of images
+
+        Returns
+        -------
+        np.array
+            The images as a numpy array
+
+        """
         x_batch = [self._load_image(i) for i in raw_x_batch]
         x_batch = np.array(x_batch)
         return x_batch
 
     def _load_image(self, img_name):
+        """
+        Open and load image.
+
+        Returns
+        -------
+        np.array
+            The image as a numpy array
+
+        """
         img = Image.open(os.path.join(self.IMAGES_DIR, img_name[:-4] + ".png"))
         img = img.resize((IMAGE_DIM, IMAGE_DIM)).convert("RGB")
         return np.array(img)
@@ -202,28 +265,34 @@ class Celeba(Dataset):
     def get_client_ids(self):
         """
         Function to retrieve all the clients of the current process
+
         Returns
         -------
         list(str)
             A list of strings of the client ids.
+
         """
         return self.clients
 
     def get_client_id(self, i):
         """
         Function to get the client id of the ith sample
+
         Parameters
         ----------
         i : int
             Index of the sample
+
         Returns
         -------
         str
             Client ID
+
         Raises
         ------
         IndexError
             If the sample index is out of bounds
+
         """
         lb = 0
         for j in range(len(self.clients)):
@@ -235,17 +304,21 @@ class Celeba(Dataset):
     def get_trainset(self, batch_size=1, shuffle=False):
         """
         Function to get the training set
+
         Parameters
         ----------
         batch_size : int, optional
             Batch size for learning
+
         Returns
         -------
         torch.utils.Dataset(decentralizepy.datasets.Data)
+
         Raises
         ------
         RuntimeError
             If the training set was not initialized
+
         """
         if self.__training__:
             return DataLoader(
@@ -256,13 +329,16 @@ class Celeba(Dataset):
     def get_testset(self):
         """
         Function to get the test set
+
         Returns
         -------
         torch.utils.Dataset(decentralizepy.datasets.Data)
+
         Raises
         ------
         RuntimeError
             If the test set was not initialized
+
         """
         if self.__testing__:
             return DataLoader(
@@ -270,12 +346,23 @@ class Celeba(Dataset):
             )
         raise RuntimeError("Test set not initialized!")
 
-    def imshow(self, img):
-        npimg = img.numpy()
-        plt.imshow(np.transpose(npimg, (1, 2, 0)))
-        plt.show()
-
     def test(self, model, loss):
+        """
+        Function to evaluate model on the test dataset.
+
+        Parameters
+        ----------
+        model : decentralizepy.models.Model
+            Model to evaluate
+        loss : torch.nn.loss
+            Loss function to evaluate
+
+        Returns
+        -------
+        tuple
+            (accuracy, loss_value)
+
+        """
         testloader = self.get_testset()
 
         logging.debug("Test Loader instantiated.")
@@ -318,7 +405,16 @@ class Celeba(Dataset):
 
 
 class CNN(Model):
+    """
+    Class for a CNN Model for Celeba
+
+    """
     def __init__(self):
+        """
+        Constructor. Instantiates the CNN Model
+            with 84*84*3 Input and 2 output classes
+
+        """
         super().__init__()
         # 2.8k parameters
         self.conv1 = nn.Conv2d(CHANNELS, 32, 3, padding="same")
@@ -329,6 +425,20 @@ class CNN(Model):
         self.fc1 = nn.Linear(5 * 5 * 32, NUM_CLASSES)
 
     def forward(self, x):
+        """
+        Forward pass of the model
+
+        Parameters
+        ----------
+        x : torch.tensor
+            The input torch tensor
+
+        Returns
+        -------
+        torch.tensor
+            The output torch tensor
+
+        """
         x = F.relu(self.pool(self.conv1(x)))
         x = F.relu(self.pool(self.conv2(x)))
         x = F.relu(self.pool(self.conv3(x)))

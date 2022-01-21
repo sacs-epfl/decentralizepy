@@ -5,6 +5,7 @@ class Dataset:
     """
     This class defines the Dataset API.
     All datasets must follow this API.
+
     """
 
     def __init__(
@@ -20,10 +21,15 @@ class Dataset:
     ):
         """
         Constructor which reads the data files, instantiates and partitions the dataset
+
         Parameters
         ----------
-        rank : int, optional
-            Rank of the current process (to get the partition). Default value is assigned 0
+        rank : int
+            Rank of the current process (to get the partition).
+        machine_id : int
+            Machine ID
+        mapping : decentralizepy.mappings.Mapping
+            Mapping to conver rank, machine_id -> uid for data partitioning
         n_procs : int, optional
             The number of processes among which to divide the data. Default value is assigned 1
         train_dir : str, optional
@@ -34,6 +40,9 @@ class Dataset:
         sizes : list(int), optional
             A list of fractions specifying how much data to alot each process. Sum of fractions should be 1.0
             By default, each process gets an equal amount.
+        test_batch_size : int, optional
+            Batch size during testing. Default value is 64
+
         """
         self.rank = rank
         self.machine_id = machine_id
@@ -60,25 +69,31 @@ class Dataset:
     def get_trainset(self):
         """
         Function to get the training set
+
         Returns
         -------
         torch.utils.Dataset(decentralizepy.datasets.Data)
+
         Raises
         ------
         RuntimeError
             If the training set was not initialized
+
         """
         raise NotImplementedError
 
     def get_testset(self):
         """
         Function to get the test set
+
         Returns
         -------
         torch.utils.Dataset(decentralizepy.datasets.Data)
+
         Raises
         ------
         RuntimeError
             If the test set was not initialized
+
         """
         raise NotImplementedError

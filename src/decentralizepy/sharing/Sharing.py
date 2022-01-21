@@ -9,6 +9,7 @@ import torch
 class Sharing:
     """
     API defining who to share with and what, and what to do on receiving
+
     """
 
     def __init__(
@@ -16,6 +17,7 @@ class Sharing:
     ):
         """
         Constructor
+
         Parameters
         ----------
         rank : int
@@ -34,6 +36,7 @@ class Sharing:
             Dataset for sharing data. Not implemented yer! TODO
         log_dir : str
             Location to write shared_params (only writing for 2 procs per machine)
+
         """
         self.rank = rank
         self.machine_id = machine_id
@@ -54,10 +57,12 @@ class Sharing:
     def received_from_all(self):
         """
         Check if all neighbors have sent the current iteration
+
         Returns
         -------
         bool
             True if required data has been received, False otherwise
+
         """
         for _, i in self.peer_deques.items():
             if len(i) == 0:
@@ -67,14 +72,17 @@ class Sharing:
     def get_neighbors(self, neighbors):
         """
         Choose which neighbors to share with
+
         Parameters
         ----------
         neighbors : list(int)
             List of all neighbors
+
         Returns
         -------
         list(int)
             Neighbors to share with
+
         """
         # modify neighbors here
         return neighbors
@@ -82,10 +90,12 @@ class Sharing:
     def serialized_model(self):
         """
         Convert model to json dict. Here we can choose how much to share
+
         Returns
         -------
         dict
             Model converted to json dict
+
         """
         m = dict()
         for key, val in self.model.state_dict().items():
@@ -95,14 +105,17 @@ class Sharing:
     def deserialized_model(self, m):
         """
         Convert received json dict to state_dict.
+
         Parameters
         ----------
         m : dict
             json dict received
+
         Returns
         -------
         state_dict
             state_dict of received
+
         """
         state_dict = dict()
         for key, value in m.items():
@@ -110,6 +123,10 @@ class Sharing:
         return state_dict
 
     def step(self):
+        """
+        Perform a sharing step. Implements D-PSGD.
+
+        """
         data = self.serialized_model()
         my_uid = self.mapping.get_uid(self.rank, self.machine_id)
         all_neighbors = self.graph.neighbors(my_uid)

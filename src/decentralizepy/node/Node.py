@@ -13,9 +13,27 @@ from decentralizepy.mappings.Mapping import Mapping
 class Node:
     """
     This class defines the node (entity that performs learning, sharing and communication).
+
     """
 
     def save_plot(self, l, label, title, xlabel, filename):
+        """
+        Save Matplotlib plot. Clears previous plots.
+
+        Parameters
+        ----------
+        l : dict
+            dict of x -> y. `x` must be castable to int.
+        label : str
+            label of the plot. Used for legend.
+        title : str
+            Header
+        xlabel : str
+            x-axis label
+        filename : str
+            Name of file to save the plot as.
+
+        """
         plt.clf()
         y_axis = [l[key] for key in l.keys()]
         x_axis = list(map(int, l.keys()))
@@ -38,7 +56,8 @@ class Node:
         *args
     ):
         """
-        Construct objects
+        Construct objects.
+
         Parameters
         ----------
         rank : int
@@ -52,25 +71,14 @@ class Node:
         graph : decentralizepy.graphs
             The object containing the global graph
         config : dict
-            A dictionary of configurations. Must contain the following:
-            [DATASET]
-                dataset_package
-                dataset_class
-                model_class
-            [OPTIMIZER_PARAMS]
-                optimizer_package
-                optimizer_class
-            [TRAIN_PARAMS]
-                training_package = decentralizepy.training.Training
-                training_class = Training
-                epochs_per_round = 25
-                batch_size = 64
+            A dictionary of configurations.
         log_dir : str
             Logging directory
         log_level : logging.Level
             One of DEBUG, INFO, WARNING, ERROR, CRITICAL
         args : optional
             Other arguments
+
         """
         log_file = os.path.join(log_dir, str(rank) + ".log")
         logging.basicConfig(
@@ -154,7 +162,6 @@ class Node:
         self.communication = comm_class(
             self.rank, self.machine_id, self.mapping, self.graph.n_procs, **comm_params
         )
-        self.communication.connect_neighbors(self.graph.neighbors(self.uid))
 
         sharing_configs = config["SHARING"]
         sharing_package = importlib.import_module(sharing_configs["sharing_package"])
@@ -181,8 +188,10 @@ class Node:
     def run(self):
         """
         Start the decentralized learning
+
         """
         self.testset = self.dataset.get_testset()
+        self.communication.connect_neighbors(self.graph.neighbors(self.uid))
         rounds_to_test = self.test_after
 
         for iteration in range(self.iterations):
@@ -269,6 +278,7 @@ class Node:
     ):
         """
         Constructor
+
         Parameters
         ----------
         rank : int
@@ -301,6 +311,7 @@ class Node:
             One of DEBUG, INFO, WARNING, ERROR, CRITICAL
         args : optional
             Other arguments
+
         """
         self.instantiate(
             rank,

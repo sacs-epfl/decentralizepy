@@ -9,6 +9,10 @@ from decentralizepy.sharing.Sharing import Sharing
 
 
 class PartialModel(Sharing):
+    """
+    This class implements the vanilla version of partial model sharing.
+
+    """
     def __init__(
         self,
         rank,
@@ -26,6 +30,7 @@ class PartialModel(Sharing):
     ):
         """
         Constructor
+
         Parameters
         ----------
         rank : int
@@ -44,6 +49,15 @@ class PartialModel(Sharing):
             Dataset for sharing data. Not implemented yet! TODO
         log_dir : str
             Location to write shared_params (only writing for 2 procs per machine)
+        alpha : float
+            Percentage of model to share
+        dict_ordered : bool
+            Specifies if the python dict maintains the order of insertion
+        save_shared : bool
+            Specifies if the indices of shared parameters should be logged
+        metadata_cap : float
+            Share full model when self.alpha > metadata_cap
+
         """
         super().__init__(
             rank, machine_id, communication, mapping, graph, model, dataset, log_dir
@@ -53,7 +67,7 @@ class PartialModel(Sharing):
         self.save_shared = save_shared
         self.metadata_cap = metadata_cap
 
-        # Only save for 2 procs
+        # Only save for 2 procs: Save space
         if rank == 0 or rank == 1:
             self.save_shared = True
 
@@ -64,6 +78,16 @@ class PartialModel(Sharing):
             Path(self.folder_path).mkdir(parents=True, exist_ok=True)
 
     def extract_top_gradients(self):
+        """
+        Extract the indices and values of the topK gradients.
+        The gradients must have been accumulated.
+
+        Returns
+        -------
+        tuple
+            (a,b). a: The magnitudes of the topK gradients, b: Their indices.
+
+        """
         logging.info("Summing up gradients")
         assert len(self.model.accumulated_gradients) > 0
         gradient_sum = self.model.accumulated_gradients[0]
@@ -79,6 +103,15 @@ class PartialModel(Sharing):
         )
 
     def serialized_model(self):
+        """
+        Convert model to json dict. self.alpha specifies the fraction of model to send.
+
+        Returns
+        -------
+        dict
+            Model converted to json dict
+
+        """
         if self.alpha > self.metadata_cap:  # Share fully
             return super().serialized_model()
 
@@ -133,6 +166,20 @@ class PartialModel(Sharing):
             return m
 
     def deserialized_model(self, m):
+        """
+        Convert received json dict to state_dict.
+
+        Parameters
+        ----------
+        m : dict
+            json dict received
+
+        Returns
+        -------
+        state_dict
+            state_dict of received
+
+        """
         if self.alpha > self.metadata_cap:  # Share fully
             return super().deserialized_model(m)
 
