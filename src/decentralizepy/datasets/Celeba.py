@@ -144,7 +144,11 @@ class Celeba(Dataset):
                 my_train_data["y"].extend(train_data[cur_client]["y"])
                 self.num_samples.append(len(train_data[cur_client]["y"]))
 
-        logging.debug("Initial shape of x: {}".format(np.array(my_train_data["x"], dtype=np.dtype("float32")).shape))
+        logging.debug(
+            "Initial shape of x: {}".format(
+                np.array(my_train_data["x"], dtype=np.dtype("float32")).shape
+            )
+        )
         self.train_x = (
             np.array(my_train_data["x"], dtype=np.dtype("float32"))
             .reshape(-1, IMAGE_DIM, IMAGE_DIM, CHANNELS)

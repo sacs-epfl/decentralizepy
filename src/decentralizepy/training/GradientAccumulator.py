@@ -75,24 +75,6 @@ class GradientAccumulator(Training):
         self.optimizer.step()
         return loss_val.item()
 
-    def train_full(self, trainset):
-        """
-        One training iteration, goes through the entire dataset
-
-        Parameters
-        ----------
-        trainset : torch.utils.data.Dataloader
-            The training dataset.
-
-        """
-        for epoch in range(self.rounds):
-            epoch_loss = 0.0
-            count = 0
-            for data, target in trainset:
-                epoch_loss += self.trainstep(data, target)
-                count += 1
-            logging.info("Epoch: {} loss: {}".format(epoch, epoch_loss / count))
-
     def train(self, dataset):
         """
         One training iteration with accumulation of gradients in model.accumulated_gradients.

@@ -48,6 +48,7 @@ class Sharing:
         self.dataset = dataset
         self.communication_round = 0
         self.log_dir = log_dir
+        self.total_data = 0
 
         self.peer_deques = dict()
         my_neighbors = self.graph.neighbors(self.uid)
@@ -100,6 +101,7 @@ class Sharing:
         m = dict()
         for key, val in self.model.state_dict().items():
             m[key] = json.dumps(val.numpy().tolist())
+            self.total_data += len(self.communication.encrypt(m[key]))
         return m
 
     def deserialized_model(self, m):

@@ -124,7 +124,11 @@ class Training:
             epoch_loss = 0.0
             count = 0
             for data, target in trainset:
-                logging.info("Starting minibatch {} with num_samples: {}".format(count, len(data)))
+                logging.info(
+                    "Starting minibatch {} with num_samples: {}".format(
+                        count, len(data)
+                    )
+                )
                 logging.info("Classes: {}".format(target))
                 epoch_loss += self.trainstep(data, target)
                 count += 1

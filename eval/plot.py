@@ -39,6 +39,8 @@ def plot_results(path):
     print("Reading folders from: ", path)
     print("Folders: ", folders)
     bytes_means, bytes_stdevs = {}, {}
+    meta_means, meta_stdevs = {}, {}
+    data_means, data_stdevs = {}, {}
     for folder in folders:
         folder_path = os.path.join(path, folder)
         if not os.path.isdir(folder_path):
@@ -76,6 +78,22 @@ def plot_results(path):
         bytes_means[folder] = list(means.values())[0]
         bytes_stdevs[folder] = list(stdevs.values())[0]
 
+        meta_list = []
+        for x in results:
+            max_key = str(max(list(map(int, x["total_meta"].keys()))))
+            meta_list.append({max_key: x["total_meta"][max_key]})
+        means, stdevs, mins, maxs = get_stats(meta_list)
+        meta_means[folder] = list(means.values())[0]
+        meta_stdevs[folder] = list(stdevs.values())[0]
+
+        data_list = []
+        for x in results:
+            max_key = str(max(list(map(int, x["total_data_per_n"].keys()))))
+            data_list.append({max_key: x["total_data_per_n"][max_key]})
+        means, stdevs, mins, maxs = get_stats(data_list)
+        data_means[folder] = list(means.values())[0]
+        data_stdevs[folder] = list(stdevs.values())[0]
+
     plt.figure(1)
     plt.savefig(os.path.join(path, "train_loss.png"))
     plt.figure(2)
@@ -96,6 +114,30 @@ def plot_results(path):
     plt.xlabel("Fraction of Model Shared")
     plt.xticks(x_pos, list(bytes_means.keys()))
     plt.savefig(os.path.join(path, "data_shared.png"))
+
+    # Plot stacked_bytes
+    plt.figure(4)
+    plt.title("Data Shared per Neighbor")
+    x_pos = np.arange(len(meta_means.keys()))
+    plt.bar(
+        x_pos,
+        np.array(list(data_means.values())) // (1024 * 1024),
+        yerr=np.array(list(data_stdevs.values())) // (1024 * 1024),
+        align="center",
+        label="Parameters",
+    )
+    plt.bar(
+        x_pos,
+        np.array(list(meta_means.values())) // (1024 * 1024),
+        bottom=np.array(list(data_means.values())) // (1024 * 1024),
+        yerr=np.array(list(meta_stdevs.values())) // (1024 * 1024),
+        align="center",
+        label="Metadata",
+    )
+    plt.ylabel("Data shared in MBs")
+    plt.xlabel("Fraction of Model Shared")
+    plt.xticks(x_pos, list(meta_means.keys()))
+    plt.savefig(os.path.join(path, "parameters_metadata.png"))
 
 
 def plot_parameters(path):

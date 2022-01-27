@@ -67,6 +67,7 @@ class PartialModel(Sharing):
         self.dict_ordered = dict_ordered
         self.save_shared = save_shared
         self.metadata_cap = metadata_cap
+        self.total_meta = 0
 
         # Only save for 2 procs: Save space
         if rank == 0 or rank == 1:
@@ -99,6 +100,9 @@ class PartialModel(Sharing):
         logging.info("Returning topk gradients")
         tensors_to_cat = [v.data.flatten() for _, v in gradient_sum.items()]
         G_topk = torch.abs(torch.cat(tensors_to_cat, dim=0))
+        std, mean = torch.std_mean(G_topk, unbiased=False)
+        self.std = std.item()
+        self.mean = mean.item()
         return torch.topk(
             G_topk, round(self.alpha * G_topk.shape[0]), dim=0, sorted=False
         )
@@ -152,6 +156,7 @@ class PartialModel(Sharing):
                 raise NotImplementedError
 
             m["indices"] = G_topk.numpy().tolist()
+
             m["params"] = T_topk.numpy().tolist()
 
             assert len(m["indices"]) == len(m["params"])
@@ -163,6 +168,8 @@ class PartialModel(Sharing):
                 m[key] = json.dumps(m[key])
 
             logging.info("Converted dictionary to json")
+            self.total_data += len(self.communication.encrypt(m["params"]))
+            self.total_meta += len(self.communication.encrypt(m["indices"]))
 
             return m
 
