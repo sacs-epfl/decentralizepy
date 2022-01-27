@@ -305,6 +305,10 @@ class Node:
                     "test_loss": {},
                     "test_acc": {},
                     "total_bytes": {},
+                    "total_meta": {},
+                    "total_data_per_n": {},
+                    "grad_mean": {},
+                    "grad_std": {},
                 }
 
             results_dict["train_loss"][iteration + 1] = loss_after_sharing
