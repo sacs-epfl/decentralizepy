@@ -413,6 +413,7 @@ class CNN(Model):
     Class for a CNN Model for FEMNIST
 
     """
+
     def __init__(self):
         """
         Constructor. Instantiates the CNN Model

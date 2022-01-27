@@ -138,10 +138,13 @@ class Celeba(Dataset):
                 os.path.join(self.train_dir, cur_file)
             )
             for cur_client in clients:
+                logging.debug("Got data of client: {}".format(cur_client))
                 self.clients.append(cur_client)
                 my_train_data["x"].extend(self.process_x(train_data[cur_client]["x"]))
                 my_train_data["y"].extend(train_data[cur_client]["y"])
                 self.num_samples.append(len(train_data[cur_client]["y"]))
+
+        logging.debug("Initial shape of x: {}".format(np.array(my_train_data["x"], dtype=np.dtype("float32")).shape))
         self.train_x = (
             np.array(my_train_data["x"], dtype=np.dtype("float32"))
             .reshape(-1, IMAGE_DIM, IMAGE_DIM, CHANNELS)
@@ -409,6 +412,7 @@ class CNN(Model):
     Class for a CNN Model for Celeba
 
     """
+
     def __init__(self):
         """
         Constructor. Instantiates the CNN Model

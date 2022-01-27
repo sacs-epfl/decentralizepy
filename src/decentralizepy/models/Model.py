@@ -7,6 +7,7 @@ class Model(nn.Module):
     More fields can be added here
 
     """
+
     def __init__(self):
         """
         Constructor

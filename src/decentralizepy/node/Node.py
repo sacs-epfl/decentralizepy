@@ -42,42 +42,20 @@ class Node:
         plt.title(title)
         plt.savefig(filename)
 
-    def instantiate(
-        self,
-        rank: int,
-        machine_id: int,
-        mapping: Mapping,
-        graph: Graph,
-        config,
-        iterations=1,
-        log_dir=".",
-        log_level=logging.INFO,
-        test_after=5,
-        *args
-    ):
+    def init_log(self, log_dir, rank, log_level, force=True):
         """
-        Construct objects.
+        Instantiate Logging.
 
         Parameters
         ----------
-        rank : int
-            Rank of process local to the machine
-        machine_id : int
-            Machine ID on which the process in running
-        n_procs_local : int
-            Number of processes on current machine
-        mapping : decentralizepy.mappings
-            The object containing the mapping rank <--> uid
-        graph : decentralizepy.graphs
-            The object containing the global graph
-        config : dict
-            A dictionary of configurations.
         log_dir : str
             Logging directory
+        rank : rank : int
+            Rank of process local to the machine
         log_level : logging.Level
             One of DEBUG, INFO, WARNING, ERROR, CRITICAL
-        args : optional
-            Other arguments
+        force : bool
+            Argument to logging.basicConfig()
 
         """
         log_file = os.path.join(log_dir, str(rank) + ".log")
@@ -88,20 +66,49 @@ class Node:
             force=True,
         )
 
-        logging.info("Started process.")
+    def cache_fields(
+        self, rank, machine_id, mapping, graph, iterations, log_dir, test_after
+    ):
+        """
+        Instantiate object field with arguments.
 
+        Parameters
+        ----------
+        rank : int
+            Rank of process local to the machine
+        machine_id : int
+            Machine ID on which the process in running
+        mapping : decentralizepy.mappings
+            The object containing the mapping rank <--> uid
+        graph : decentralizepy.graphs
+            The object containing the global graph
+        log_dir : str
+            Logging directory
+
+        """
         self.rank = rank
         self.machine_id = machine_id
         self.graph = graph
         self.mapping = mapping
         self.uid = self.mapping.get_uid(rank, machine_id)
         self.log_dir = log_dir
+        self.iterations = iterations
+        self.test_after = test_after
 
         logging.debug("Rank: %d", self.rank)
         logging.debug("type(graph): %s", str(type(self.rank)))
         logging.debug("type(mapping): %s", str(type(self.mapping)))
 
-        dataset_configs = config["DATASET"]
+    def init_dataset_model(self, dataset_configs):
+        """
+        Instantiate dataset and model from config.
+
+        Parameters
+        ----------
+        dataset_configs : dict
+            Python dict containing dataset config params
+
+        """
         dataset_module = importlib.import_module(dataset_configs["dataset_package"])
         self.dataset_class = getattr(dataset_module, dataset_configs["dataset_class"])
         self.dataset_params = utils.remove_keys(
@@ -116,7 +123,16 @@ class Node:
         self.model_class = getattr(dataset_module, dataset_configs["model_class"])
         self.model = self.model_class()
 
-        optimizer_configs = config["OPTIMIZER_PARAMS"]
+    def init_optimizer(self, optimizer_configs):
+        """
+        Instantiate optimizer from config.
+
+        Parameters
+        ----------
+        optimizer_configs : dict
+            Python dict containing optimizer config params
+
+        """
         optimizer_module = importlib.import_module(
             optimizer_configs["optimizer_package"]
         )
@@ -130,7 +146,16 @@ class Node:
             self.model.parameters(), **self.optimizer_params
         )
 
-        train_configs = config["TRAIN_PARAMS"]
+    def init_trainer(self, train_configs):
+        """
+        Instantiate training module and loss from config.
+
+        Parameters
+        ----------
+        train_configs : dict
+            Python dict containing training config params
+
+        """
         train_module = importlib.import_module(train_configs["training_package"])
         train_class = getattr(train_module, train_configs["training_class"])
 
@@ -155,7 +180,16 @@ class Node:
             self.model, self.optimizer, self.loss, **train_params
         )
 
-        comm_configs = config["COMMUNICATION"]
+    def init_comm(self, comm_configs):
+        """
+        Instantiate communication module from config.
+
+        Parameters
+        ----------
+        comm_configs : dict
+            Python dict containing communication config params
+
+        """
         comm_module = importlib.import_module(comm_configs["comm_package"])
         comm_class = getattr(comm_module, comm_configs["comm_class"])
         comm_params = utils.remove_keys(comm_configs, ["comm_package", "comm_class"])
@@ -163,7 +197,16 @@ class Node:
             self.rank, self.machine_id, self.mapping, self.graph.n_procs, **comm_params
         )
 
-        sharing_configs = config["SHARING"]
+    def init_sharing(self, sharing_configs):
+        """
+        Instantiate sharing module from config.
+
+        Parameters
+        ----------
+        sharing_configs : dict
+            Python dict containing sharing config params
+
+        """
         sharing_package = importlib.import_module(sharing_configs["sharing_package"])
         sharing_class = getattr(sharing_package, sharing_configs["sharing_class"])
         sharing_params = utils.remove_keys(
@@ -181,9 +224,53 @@ class Node:
             **sharing_params
         )
 
-        self.iterations = iterations
-        self.test_after = test_after
-        self.log_dir = log_dir
+    def instantiate(
+        self,
+        rank: int,
+        machine_id: int,
+        mapping: Mapping,
+        graph: Graph,
+        config,
+        iterations=1,
+        log_dir=".",
+        log_level=logging.INFO,
+        test_after=5,
+        *args
+    ):
+        """
+        Construct objects.
+
+        Parameters
+        ----------
+        rank : int
+            Rank of process local to the machine
+        machine_id : int
+            Machine ID on which the process in running
+        mapping : decentralizepy.mappings
+            The object containing the mapping rank <--> uid
+        graph : decentralizepy.graphs
+            The object containing the global graph
+        config : dict
+            A dictionary of configurations.
+        log_dir : str
+            Logging directory
+        log_level : logging.Level
+            One of DEBUG, INFO, WARNING, ERROR, CRITICAL
+        args : optional
+            Other arguments
+
+        """
+        logging.info("Started process.")
+
+        self.cache_fields(
+            rank, machine_id, mapping, graph, iterations, log_dir, test_after
+        )
+        self.init_log(log_dir, rank, log_level)
+        self.init_dataset_model(config["DATASET"])
+        self.init_optimizer(config["OPTIMIZER_PARAMS"])
+        self.init_trainer(config["TRAIN_PARAMS"])
+        self.init_comm(config["COMMUNICATION"])
+        self.init_sharing(config["SHARING"])
 
     def run(self):
         """

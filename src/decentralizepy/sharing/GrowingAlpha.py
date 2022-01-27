@@ -8,6 +8,7 @@ class GrowingAlpha(PartialModel):
     This class implements the basic growing partial model sharing using a linear function.
 
     """
+
     def __init__(
         self,
         rank,

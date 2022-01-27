@@ -13,6 +13,7 @@ class PartialModel(Sharing):
     This class implements the vanilla version of partial model sharing.
 
     """
+
     def __init__(
         self,
         rank,

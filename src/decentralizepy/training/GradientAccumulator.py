@@ -8,6 +8,7 @@ class GradientAccumulator(Training):
     This class implements the training module which also accumulates gradients of steps in a list.
 
     """
+
     def __init__(
         self,
         model,

@@ -15,6 +15,7 @@ class TCP(Communication):
     TCP Communication API
 
     """
+
     def addr(self, rank, machine_id):
         """
         Returns TCP address of the process.

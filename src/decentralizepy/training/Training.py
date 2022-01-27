@@ -109,7 +109,7 @@ class Training:
         self.optimizer.step()
         return loss_val.item()
 
-    def train_full(self, trainset):
+    def train_full(self, dataset):
         """
         One training iteration, goes through the entire dataset
 
@@ -120,9 +120,12 @@ class Training:
 
         """
         for epoch in range(self.rounds):
+            trainset = dataset.get_trainset(self.batch_size, self.shuffle)
             epoch_loss = 0.0
             count = 0
             for data, target in trainset:
+                logging.info("Starting minibatch {} with num_samples: {}".format(count, len(data)))
+                logging.info("Classes: {}".format(target))
                 epoch_loss += self.trainstep(data, target)
                 count += 1
             logging.info("Epoch: {} loss: {}".format(epoch, epoch_loss / count))
@@ -137,13 +140,13 @@ class Training:
             The training dataset. Should implement get_trainset(batch_size, shuffle)
 
         """
-        trainset = dataset.get_trainset(self.batch_size, self.shuffle)
 
         if self.full_epochs:
-            self.train_full(trainset)
+            self.train_full(dataset)
         else:
             iter_loss = 0.0
             count = 0
+            trainset = dataset.get_trainset(self.batch_size, self.shuffle)
             while count < self.rounds:
                 for data, target in trainset:
                     iter_loss += self.trainstep(data, target)

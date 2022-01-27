@@ -15,7 +15,7 @@ Setting up decentralizepy
     pip3 install --upgrade pip
     pip install --upgrade pip
 
-* Install decentralizepy for development/ ::
+* Install decentralizepy for development. ::
 
     pip3 install --editable .\[dev\]
     

@@ -16,7 +16,7 @@ def conditional_value(var, nul, default):
         The null value. Assigns default if var == nul
     default : any
         The default value
-    
+
     Returns
     -------
     type(var)
