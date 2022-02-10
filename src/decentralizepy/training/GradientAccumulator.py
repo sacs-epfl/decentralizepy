@@ -14,6 +14,7 @@ class GradientAccumulator(Training):
         model,
         optimizer,
         loss,
+        log_dir,
         rounds="",
         full_epochs="",
         batch_size="",
@@ -30,6 +31,8 @@ class GradientAccumulator(Training):
             Optimizer to learn parameters
         loss : function
             Loss function
+        log_dir : str
+            Directory to log the model change.
         rounds : int, optional
             Number of steps/epochs per training call
         full_epochs: bool, optional
@@ -41,7 +44,7 @@ class GradientAccumulator(Training):
 
         """
         super().__init__(
-            model, optimizer, loss, rounds, full_epochs, batch_size, shuffle
+            model, optimizer, loss, log_dir, rounds, full_epochs, batch_size, shuffle
         )
 
     def trainstep(self, data, target):

@@ -16,6 +16,7 @@ class Training:
         model,
         optimizer,
         loss,
+        log_dir,
         rounds="",
         full_epochs="",
         batch_size="",
@@ -32,6 +33,8 @@ class Training:
             Optimizer to learn parameters
         loss : function
             Loss function
+        log_dir : str
+            Directory to log the model change.
         rounds : int, optional
             Number of steps/epochs per training call
         full_epochs: bool, optional
@@ -45,6 +48,7 @@ class Training:
         self.model = model
         self.optimizer = optimizer
         self.loss = loss
+        self.log_dir = log_dir
         self.rounds = utils.conditional_value(rounds, "", int(1))
         self.full_epochs = utils.conditional_value(full_epochs, "", False)
         self.batch_size = utils.conditional_value(batch_size, "", int(1))
