@@ -101,8 +101,8 @@ class ChangeAccumulator(Training):
         output_dict = dict()
         output_dict["order"] = list(self.model.state_dict().keys())
         shapes = dict()
-        for k, v in self.model.state_dict().items():
-            shapes[k] = list(v.shape)
+        for k, v1 in self.model.state_dict().items():
+            shapes[k] = list(v1.shape)
         output_dict["shapes"] = shapes
 
         output_dict[self.communication_round] = v.tolist()
