@@ -105,7 +105,7 @@ class ChangeAccumulator(Training):
             shapes[k] = list(v1.shape)
         output_dict["shapes"] = shapes
 
-        output_dict[self.communication_round] = v.tolist()
+        output_dict["tensor"] = v.tolist()
 
         with open(
             os.path.join(
