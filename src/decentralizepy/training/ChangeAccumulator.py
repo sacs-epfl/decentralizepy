@@ -132,7 +132,7 @@ class ChangeAccumulator(Training):
         Saves the change and the gradient values for every iteration
 
         """
-        tensors_to_cat = [v.data.flatten() for _, v in self.model.items()]
+        tensors_to_cat = [v.data.flatten() for _, v in self.model.state_dict().items()]
         params = torch.abs(torch.cat(tensors_to_cat, dim=0))
         self.save_vector(params, self.model_val_path)
 
