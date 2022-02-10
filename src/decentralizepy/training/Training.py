@@ -13,6 +13,9 @@ class Training:
 
     def __init__(
         self,
+        rank,
+        machine_id,
+        mapping,
         model,
         optimizer,
         loss,
@@ -27,6 +30,12 @@ class Training:
 
         Parameters
         ----------
+        rank : int
+            Rank of process local to the machine
+        machine_id : int
+            Machine ID on which the process in running
+        mapping : decentralizepy.mappings
+            The object containing the mapping rank <--> uid
         model : torch.nn.Module
             Neural Network for training
         optimizer : torch.optim
@@ -49,6 +58,9 @@ class Training:
         self.optimizer = optimizer
         self.loss = loss
         self.log_dir = log_dir
+        self.rank = rank
+        self.machine_id = machine_id
+        self.mapping = mapping
         self.rounds = utils.conditional_value(rounds, "", int(1))
         self.full_epochs = utils.conditional_value(full_epochs, "", False)
         self.batch_size = utils.conditional_value(batch_size, "", int(1))

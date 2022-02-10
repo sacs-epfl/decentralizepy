@@ -16,6 +16,9 @@ class ChangeAccumulator(Training):
 
     def __init__(
         self,
+        rank,
+        machine_id,
+        mapping,
         model,
         optimizer,
         loss,
@@ -31,6 +34,12 @@ class ChangeAccumulator(Training):
 
         Parameters
         ----------
+        rank : int
+            Rank of process local to the machine
+        machine_id : int
+            Machine ID on which the process in running
+        mapping : decentralizepy.mappings
+            The object containing the mapping rank <--> uid
         model : torch.nn.Module
             Neural Network for training
         optimizer : torch.optim
@@ -52,7 +61,17 @@ class ChangeAccumulator(Training):
 
         """
         super().__init__(
-            model, optimizer, loss, log_dir, rounds, full_epochs, batch_size, shuffle
+            rank,
+            machine_id,
+            mapping,
+            model,
+            optimizer,
+            loss,
+            log_dir,
+            rounds,
+            full_epochs,
+            batch_size,
+            shuffle,
         )
         self.save_accumulated = conditional_value(save_accumulated, "", True)
         self.communication_round = 0

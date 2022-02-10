@@ -177,7 +177,14 @@ class Node:
             ],
         )
         self.trainer = train_class(
-            self.model, self.optimizer, self.loss, self.log_dir, **train_params
+            self.rank,
+            self.machine_id,
+            self.mapping,
+            self.model,
+            self.optimizer,
+            self.loss,
+            self.log_dir,
+            **train_params
         )
 
     def init_comm(self, comm_configs):

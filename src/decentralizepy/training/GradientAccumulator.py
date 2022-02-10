@@ -11,6 +11,9 @@ class GradientAccumulator(Training):
 
     def __init__(
         self,
+        rank,
+        machine_id,
+        mapping,
         model,
         optimizer,
         loss,
@@ -25,6 +28,12 @@ class GradientAccumulator(Training):
 
         Parameters
         ----------
+        rank : int
+            Rank of process local to the machine
+        machine_id : int
+            Machine ID on which the process in running
+        mapping : decentralizepy.mappings
+            The object containing the mapping rank <--> uid
         model : torch.nn.Module
             Neural Network for training
         optimizer : torch.optim
@@ -44,7 +53,17 @@ class GradientAccumulator(Training):
 
         """
         super().__init__(
-            model, optimizer, loss, log_dir, rounds, full_epochs, batch_size, shuffle
+            rank,
+            machine_id,
+            mapping,
+            model,
+            optimizer,
+            loss,
+            log_dir,
+            rounds,
+            full_epochs,
+            batch_size,
+            shuffle,
         )
 
     def trainstep(self, data, target):

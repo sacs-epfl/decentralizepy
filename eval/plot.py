@@ -71,11 +71,21 @@ def plot_results(path):
         plot(means, stdevs, mins, maxs, "Testing Accuracy", folder, "lower right")
         plt.figure(6)
         means, stdevs, mins, maxs = get_stats([x["grad_std"] for x in results])
-        plot(means, stdevs, mins, maxs, "Gradient Variation over Nodes", folder, "upper right")
+        plot(
+            means,
+            stdevs,
+            mins,
+            maxs,
+            "Gradient Variation over Nodes",
+            folder,
+            "upper right",
+        )
         # Plot Testing loss
         plt.figure(7)
         means, stdevs, mins, maxs = get_stats([x["grad_mean"] for x in results])
-        plot(means, stdevs, mins, maxs, "Gradient Magnitude Mean", folder, "upper right")
+        plot(
+            means, stdevs, mins, maxs, "Gradient Magnitude Mean", folder, "upper right"
+        )
         # Collect total_bytes shared
         bytes_list = []
         for x in results:
