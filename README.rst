@@ -20,6 +20,15 @@ Setting up decentralizepy
 
     pip3 install --editable .\[dev\]
     
+----------------
+Running the code
+----------------
+
+* Choose and modify one of the config files in ``eval/{step,epoch}_configs``.
+* Modify the dataset paths and ``addresses_filepath`` in the config file.
+* In eval/run.sh, modify ``first_machine`` (used to calculate machine_id of all machines), ``original_config``, and other arguments as required.
+* Execute eval/run.sh on all the machines simultaneously. There is a synchronization barrier mechanism at the start so that all processes start training together.
+
 Node
 ----
 * The Manager. Optimizations at process level.
