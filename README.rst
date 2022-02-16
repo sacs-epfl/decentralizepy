@@ -8,14 +8,21 @@ Setting up decentralizepy
 
 * Fork the repository.
 * Clone and enter your local repository.
-* Check if you have ``python>=3.8``.
-* (Optional) Create and activate a virtual environment.
+* Check if you have ``python>=3.8``. ::
+
+    python --version
+
+* (Optional) Create and activate a virtual environment. ::
+  
+    python3 -m venv [venv-name]
+    source [venv-name]/bin/activate
+
 * Update pip. ::
 
     pip3 install --upgrade pip
     pip install --upgrade pip
 
-* On Mac M1, installing ``pyzmq`` fails with `pip`. Use ``conda``.
+* On Mac M1, installing ``pyzmq`` fails with `pip`. Use `conda <https://conda.io>`_.
 * Install decentralizepy for development. ::
 
     pip3 install --editable .\[dev\]
@@ -26,7 +33,7 @@ Running the code
 
 * Choose and modify one of the config files in ``eval/{step,epoch}_configs``.
 * Modify the dataset paths and ``addresses_filepath`` in the config file.
-* In eval/run.sh, modify ``first_machine`` (used to calculate machine_id of all machines), ``original_config``, and other arguments as required.
+* In eval/run.sh, modify arguments as required.
 * Execute eval/run.sh on all the machines simultaneously. There is a synchronization barrier mechanism at the start so that all processes start training together.
 
 Node

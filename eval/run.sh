@@ -3,10 +3,6 @@
 decpy_path=~/Gitlab/decentralizepy/eval
 cd $decpy_path
 
-first_machine=128
-m=`/sbin/ifconfig ens785 | grep 'inet ' | awk '{print $2}' | awk -v FS=. '{print $4}'`
-m=`expr $m - $first_machine`
-
 env_python=~/miniconda3/envs/decpy/bin/python3
 graph=96_nodes_random1.edges
 original_config=epoch_configs/config_celeba.ini
@@ -17,6 +13,8 @@ iterations=76
 test_after=2
 eval_file=testing.py
 log_level=INFO
+
+m=`cat $(grep addresses_filepath $original_config | awk '{print $3}') | grep $(/sbin/ifconfig ens785 | grep 'inet ' | awk '{print $2}') | cut -d'"' -f2`
 
 cp $original_config $config_file
 echo "alpha = 0.75" >> $config_file
