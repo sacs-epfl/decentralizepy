@@ -57,8 +57,11 @@ class RoundRobinPartial(Sharing):
         self.alpha = alpha
         random.seed(self.mapping.get_uid(rank, machine_id))
         n_params = self.model.count_params()
+        logging.info("Total number of parameters: {}".format(n_params))
         self.block_size = math.ceil(self.alpha * n_params)
-        self.num_blocks = n_params // self.block_size
+        logging.info("Block_size: {}".format(self.block_size))
+        self.num_blocks = math.ceil(n_params / self.block_size)
+        logging.info("Total number of blocks: {}".format(n_params))
         self.current_block = random.randint(0, self.num_blocks - 1)
 
     def serialized_model(self):
@@ -81,7 +84,7 @@ class RoundRobinPartial(Sharing):
             block_end = min(T.shape[0], (self.current_block + 1) * self.block_size)
             self.current_block = (self.current_block + 1) % self.num_blocks
             T_send = T[block_start:block_end]
-
+            logging.info("Range sending: {}-{}".format(block_start, block_end))
             logging.info("Generating dictionary to send")
 
             m = dict()
