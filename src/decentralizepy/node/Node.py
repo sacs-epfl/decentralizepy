@@ -394,8 +394,6 @@ class Node:
             Rank of process local to the machine
         machine_id : int
             Machine ID on which the process in running
-        n_procs_local : int
-            Number of processes on current machine
         mapping : decentralizepy.mappings
             The object containing the mapping rank <--> uid
         graph : decentralizepy.graphs
