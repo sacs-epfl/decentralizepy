@@ -123,7 +123,8 @@ class Femnist(Dataset):
             self.sizes[-1] += 1.0 - frac * self.n_procs
             logging.debug("Size fractions: {}".format(self.sizes))
 
-        my_clients = DataPartitioner(files, self.sizes).use(self.rank)
+        self.uid = self.mapping.get_uid(self.rank, self.machine_id)
+        my_clients = DataPartitioner(files, self.sizes).use(self.uid)
         my_train_data = {"x": [], "y": []}
         self.clients = []
         self.num_samples = []
