@@ -18,6 +18,18 @@ class Mapping:
         """
         self.n_procs = n_procs
 
+    def get_n_procs(self):
+        """
+        Gives the global sum of all processes that are spawned on the machines
+
+        Returns
+        -------
+        int
+            the number of global processes
+        """
+
+        return self.n_procs
+
     def get_uid(self, rank: int, machine_id: int):
         """
         Gives the global unique identifier of the node

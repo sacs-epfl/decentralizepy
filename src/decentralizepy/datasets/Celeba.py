@@ -15,6 +15,7 @@ import decentralizepy.utils as utils
 from decentralizepy.datasets.Data import Data
 from decentralizepy.datasets.Dataset import Dataset
 from decentralizepy.datasets.Partitioner import DataPartitioner
+from decentralizepy.mappings.Mapping import Mapping
 from decentralizepy.models.Model import Model
 
 IMAGE_DIM = 84
@@ -185,10 +186,9 @@ class Celeba(Dataset):
 
     def __init__(
         self,
-        rank,
-        machine_id,
-        mapping,
-        n_procs="",
+        rank: int,
+        machine_id: int,
+        mapping: Mapping,
         train_dir="",
         test_dir="",
         images_dir="",
@@ -205,12 +205,11 @@ class Celeba(Dataset):
         machine_id : int
             Machine ID
         mapping : decentralizepy.mappings.Mapping
-            Mapping to conver rank, machine_id -> uid for data partitioning
-        n_procs : int, optional
-            The number of processes among which to divide the data. Default value is assigned 1
+            Mapping to convert rank, machine_id -> uid for data partitioning
+            It also provides the total number of global processes
         train_dir : str, optional
             Path to the training data files. Required to instantiate the training set
-            The training set is partitioned according to n_procs and sizes
+            The training set is partitioned according to the number of global processes and sizes
         test_dir : str. optional
             Path to the testing data files Required to instantiate the testing set
         sizes : list(int), optional
@@ -224,7 +223,6 @@ class Celeba(Dataset):
             rank,
             machine_id,
             mapping,
-            n_procs,
             train_dir,
             test_dir,
             sizes,
