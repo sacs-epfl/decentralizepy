@@ -15,3 +15,31 @@ class Model(nn.Module):
         """
         super().__init__()
         self.accumulated_gradients = []
+        self._param_count_ot = None
+        self._param_count_total = None
+
+    def count_params(self, only_trainable=False):
+        """
+        Counts the total number of params
+
+        Parameters
+        ----------
+        only_trainable : bool
+            Counts only parameters with gradients when True
+
+        Returns
+        -------
+        int
+            Total number of parameters
+
+        """
+        if only_trainable:
+            if not self._param_count_ot:
+                self._param_count_ot = sum(
+                    p.numel() for p in self.parameters() if p.requires_grad
+                )
+            return self._param_count_ot
+        else:
+            if not self._param_count_total:
+                self._param_count_total = sum(p.numel() for p in self.parameters())
+            return self._param_count_total

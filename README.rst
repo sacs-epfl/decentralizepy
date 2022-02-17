@@ -36,6 +36,16 @@ Running the code
 * In eval/run.sh, modify arguments as required.
 * Execute eval/run.sh on all the machines simultaneously. There is a synchronization barrier mechanism at the start so that all processes start training together.
 
+------------
+Contributing
+------------
+
+* ``isort`` and ``black`` are installed along with the package for code linting.
+* While in the root directory of the repository, before committing the changes, please run ::
+
+    black .
+    isort .
+
 Node
 ----
 * The Manager. Optimizations at process level.
