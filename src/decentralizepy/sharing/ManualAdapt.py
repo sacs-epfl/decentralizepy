@@ -19,8 +19,8 @@ class ManualAdapt(PartialModel):
         model,
         dataset,
         log_dir,
-        change_alpha: list,
-        change_rounds: list,
+        change_alpha,
+        change_rounds,
         dict_ordered=True,
         save_shared=False,
         metadata_cap=1.0,
@@ -58,6 +58,16 @@ class ManualAdapt(PartialModel):
             Share full model when self.alpha > metadata_cap
 
         """
+        assert change_alpha != ""
+        assert change_alpha != None
+        assert change_rounds != ""
+        assert change_rounds != None
+
+        if type(change_alpha) == str:
+            change_alpha = eval(change_alpha)
+        if type(change_rounds) == str:
+            change_rounds = eval(change_rounds)
+
         super().__init__(
             rank,
             machine_id,
