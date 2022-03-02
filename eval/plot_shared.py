@@ -11,6 +11,7 @@ def plot(x, y, label, *args):
     plt.plot(x, y, *args, label=label)
     plt.legend()
 
+
 def plot_shared(path, title):
     model_path = os.path.join(path, "plots")
     Path(model_path).mkdir(parents=True, exist_ok=True)
@@ -29,7 +30,7 @@ def plot_shared(path, title):
                         current_params *= v
                     total_params += current_params
                 print("Total Params: ", str(total_params))
-                shared_count = np.zeros(total_params, dtype = int)
+                shared_count = np.zeros(total_params, dtype=int)
             del model_vec["shapes"]
             model_vec = np.array(model_vec[list(model_vec.keys())[0]])
         shared_count[model_vec] += 1

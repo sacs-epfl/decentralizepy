@@ -1,5 +1,6 @@
 import json
 import logging
+import pickle
 from collections import deque
 
 import zmq
@@ -85,7 +86,7 @@ class TCP(Communication):
 
     def encrypt(self, data):
         """
-        Encode data using utf8.
+        Encode data as python pickle.
 
         Parameters
         ----------
@@ -98,11 +99,11 @@ class TCP(Communication):
             Encoded data
 
         """
-        return json.dumps(data).encode("utf8")
+        return pickle.dumps(data)
 
     def decrypt(self, sender, data):
         """
-        Decode received data from utf8.
+        Decode received pickle data.
 
         Parameters
         ----------
@@ -118,7 +119,7 @@ class TCP(Communication):
 
         """
         sender = int(sender.decode())
-        data = json.loads(data.decode("utf8"))
+        data = pickle.loads(data)
         return sender, data
 
     def connect_neighbors(self, neighbors):

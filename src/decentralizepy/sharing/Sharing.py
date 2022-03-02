@@ -1,5 +1,5 @@
-import json
 import logging
+import pickle
 from collections import deque
 
 import numpy
@@ -90,28 +90,28 @@ class Sharing:
 
     def serialized_model(self):
         """
-        Convert model to json dict. Here we can choose how much to share
+        Convert model to a dictionary. Here we can choose how much to share
 
         Returns
         -------
         dict
-            Model converted to json dict
+            Model converted to dict
 
         """
         m = dict()
         for key, val in self.model.state_dict().items():
-            m[key] = json.dumps(val.numpy().tolist())
+            m[key] = val.numpy()
             self.total_data += len(self.communication.encrypt(m[key]))
         return m
 
     def deserialized_model(self, m):
         """
-        Convert received json dict to state_dict.
+        Convert received dict to state_dict.
 
         Parameters
         ----------
         m : dict
-            json dict received
+            received dict
 
         Returns
         -------
@@ -121,7 +121,7 @@ class Sharing:
         """
         state_dict = dict()
         for key, value in m.items():
-            state_dict[key] = torch.from_numpy(numpy.array(json.loads(value)))
+            state_dict[key] = torch.from_numpy(value)
         return state_dict
 
     def step(self):

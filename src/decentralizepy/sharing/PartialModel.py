@@ -109,12 +109,12 @@ class PartialModel(Sharing):
 
     def serialized_model(self):
         """
-        Convert model to json dict. self.alpha specifies the fraction of model to send.
+        Convert model to a dict. self.alpha specifies the fraction of model to send.
 
         Returns
         -------
         dict
-            Model converted to json dict
+            Model converted to a dict
 
         """
         if self.alpha > self.metadata_cap:  # Share fully
@@ -164,10 +164,7 @@ class PartialModel(Sharing):
 
             logging.info("Generated dictionary to send")
 
-            for key in m:
-                m[key] = json.dumps(m[key])
-
-            logging.info("Converted dictionary to json")
+            logging.info("Converted dictionary to pickle")
             self.total_data += len(self.communication.encrypt(m["params"]))
             self.total_meta += len(self.communication.encrypt(m["indices"]))
 
@@ -175,12 +172,12 @@ class PartialModel(Sharing):
 
     def deserialized_model(self, m):
         """
-        Convert received json dict to state_dict.
+        Convert received dict to state_dict.
 
         Parameters
         ----------
         m : dict
-            json dict received
+            dict received
 
         Returns
         -------
@@ -207,9 +204,9 @@ class PartialModel(Sharing):
                 tensors_to_cat.append(t)
 
             T = torch.cat(tensors_to_cat, dim=0)
-            index_tensor = torch.tensor(json.loads(m["indices"]))
+            index_tensor = torch.tensor(m["indices"])
             logging.debug("Original tensor: {}".format(T[index_tensor]))
-            T[index_tensor] = torch.tensor(json.loads(m["params"]))
+            T[index_tensor] = torch.tensor(m["params"])
             logging.debug("Final tensor: {}".format(T[index_tensor]))
             start_index = 0
             for i, key in enumerate(state_dict):
