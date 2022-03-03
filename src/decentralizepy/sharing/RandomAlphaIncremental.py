@@ -77,6 +77,6 @@ class RandomAlphaIncremental(PartialModel):
         Perform a sharing step. Implements D-PSGD with alpha randomly chosen from an increasing range.
 
         """
-        self.alpha = round(random.random(self.range_start, self.range_end), 2)
-        self.range_end = min(1.0, self.range_end + round(random.random(0.0, 0.1), 2))
+        self.alpha = round(random.uniform(self.range_start, self.range_end), 2)
+        self.range_end = min(1.0, self.range_end + round(random.uniform(0.0, 0.1), 2))
         super().step()
