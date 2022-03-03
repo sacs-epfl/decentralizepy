@@ -23,7 +23,7 @@ class RandomAlphaIncremental(PartialModel):
         save_shared=False,
         metadata_cap=1.0,
         range_start=0.1,
-        range_end=0.2
+        range_end=0.2,
     ):
         """
         Constructor
@@ -68,9 +68,7 @@ class RandomAlphaIncremental(PartialModel):
             save_shared,
             metadata_cap,
         )
-        random.seed(
-            self.mapping.get_uid(self.rank, self.machine_id)
-        )
+        random.seed(self.mapping.get_uid(self.rank, self.machine_id))
         self.range_start = range_start
         self.range_end = range_end
 
@@ -80,5 +78,5 @@ class RandomAlphaIncremental(PartialModel):
 
         """
         self.alpha = round(random.random(self.range_start, self.range_end), 2)
-        self.range_end = min(1.0, self.range_end+random.random(0.0, 0.1))
+        self.range_end = min(1.0, self.range_end + round(random.random(0.0, 0.1), 2))
         super().step()
