@@ -159,6 +159,8 @@ class PartialModel(Sharing):
 
             m["params"] = T_topk.numpy()
 
+            m["send_partial"] = True
+
             assert len(m["indices"]) == len(m["params"])
             logging.info("Elements sending: {}".format(len(m["indices"])))
 
@@ -185,7 +187,7 @@ class PartialModel(Sharing):
             state_dict of received
 
         """
-        if self.alpha > self.metadata_cap:  # Share fully
+        if "send_partial" not in m:
             return super().deserialized_model(m)
 
         with torch.no_grad():
