@@ -155,9 +155,9 @@ class PartialModel(Sharing):
             if not self.dict_ordered:
                 raise NotImplementedError
 
-            m["indices"] = G_topk.numpy().tolist()
+            m["indices"] = G_topk.numpy()
 
-            m["params"] = T_topk.numpy().tolist()
+            m["params"] = T_topk.numpy()
 
             assert len(m["indices"]) == len(m["params"])
             logging.info("Elements sending: {}".format(len(m["indices"])))

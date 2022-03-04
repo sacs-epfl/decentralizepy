@@ -3,6 +3,7 @@ import json
 import logging
 import os
 
+import torch
 from matplotlib import pyplot as plt
 
 from decentralizepy import utils
@@ -420,6 +421,8 @@ class Node:
             Other arguments
 
         """
+        torch.set_num_threads(2)
+        torch.set_num_interop_threads(1)
         self.instantiate(
             rank,
             machine_id,
