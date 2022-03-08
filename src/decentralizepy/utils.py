@@ -75,6 +75,7 @@ def get_args():
     parser.add_argument("-gf", "--graph_file", type=str, default="36_nodes.edges")
     parser.add_argument("-gt", "--graph_type", type=str, default="edges")
     parser.add_argument("-ta", "--test_after", type=int, default=5)
+    parser.add_argument("-ro", "--reset_optimizer", type=int, default=1)
 
     args = parser.parse_args()
     return args
@@ -103,6 +104,7 @@ def write_args(args, path):
         "graph_file": args.graph_file,
         "graph_type": args.graph_type,
         "test_after": args.test_after,
+        "reset_optimizer": args.reset_optimizer,
     }
     with open(os.path.join(path, "args.json"), "w") as of:
         json.dump(data, of)
