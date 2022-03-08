@@ -59,3 +59,16 @@ class Linear(Mapping):
 
         """
         return (uid % self.procs_per_machine), (uid // self.procs_per_machine)
+
+    def get_local_procs_count(self):
+        """
+        Gives number of processes that run on the node
+
+        Returns
+        -------
+        int
+            the number of local processes
+
+        """
+
+        return self.procs_per_machine

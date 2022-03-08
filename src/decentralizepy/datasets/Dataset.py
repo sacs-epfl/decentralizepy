@@ -1,6 +1,7 @@
 from decentralizepy import utils
 from decentralizepy.mappings.Mapping import Mapping
 
+
 class Dataset:
     """
     This class defines the Dataset API.

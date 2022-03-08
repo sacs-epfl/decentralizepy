@@ -1,6 +1,6 @@
 import sys
-from decentralizepy.datasets.Femnist import Femnist
 
+from decentralizepy.datasets.Femnist import Femnist
 
 if __name__ == "__main__":
     f = Femnist(None, None, None)

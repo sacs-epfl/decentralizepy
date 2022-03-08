@@ -1,8 +1,10 @@
 import importlib
 import json
 import logging
+import math
 import os
 
+import torch
 from matplotlib import pyplot as plt
 
 from decentralizepy import utils
@@ -420,6 +422,10 @@ class Node:
             Other arguments
 
         """
+        total_threads = os.cpu_count()
+        threads_per_proc = max(math.floor(total_threads / mapping.procs_per_machine), 1)
+        torch.set_num_threads(threads_per_proc)
+        torch.set_num_interop_threads(1)
         self.instantiate(
             rank,
             machine_id,
@@ -431,6 +437,9 @@ class Node:
             log_level,
             test_after,
             *args
+        )
+        logging.info(
+            "Each proc uses %d threads out of %d.", threads_per_proc, total_threads
         )
 
         self.run()
