@@ -70,8 +70,8 @@ class PartialModel(Sharing):
         self.total_meta = 0
 
         # Only save for 2 procs: Save space
-        if rank == 0 or rank == 1:
-            self.save_shared = True
+        if self.save_shared and not (rank == 0 or rank == 1):
+            self.save_shared = False
 
         if self.save_shared:
             self.folder_path = os.path.join(

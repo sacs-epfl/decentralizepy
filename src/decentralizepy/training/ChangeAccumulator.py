@@ -73,7 +73,7 @@ class ChangeAccumulator(Training):
             batch_size,
             shuffle,
         )
-        self.save_accumulated = conditional_value(save_accumulated, "", True)
+        self.save_accumulated = conditional_value(save_accumulated, "", False)
         self.communication_round = 0
         if self.save_accumulated:
             self.model_change_path = os.path.join(
