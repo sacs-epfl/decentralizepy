@@ -62,6 +62,6 @@ if __name__ == "__main__":
             args.log_dir,
             log_level[args.log_level],
             args.test_after,
-            args.reset_optimzer,
+            args.reset_optimizer,
         ],
     )
