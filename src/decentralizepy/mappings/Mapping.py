@@ -67,3 +67,16 @@ class Mapping:
         """
 
         raise NotImplementedError
+
+    def get_local_procs_count(self):
+        """
+        Gives number of processes that run on the node
+
+        Returns
+        -------
+        int
+            the number of local processes
+
+        """
+
+        raise NotImplementedError
