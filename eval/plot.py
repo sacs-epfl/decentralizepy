@@ -61,14 +61,20 @@ def plot_results(path):
         plt.figure(1)
         means, stdevs, mins, maxs = get_stats([x["train_loss"] for x in results])
         plot(means, stdevs, mins, maxs, "Training Loss", folder, "upper right")
+        with open(os.path.join(path, "train_loss_" + folder + ".json"), "w") as f:
+            json.dump({"mean": means, "std": stdevs}, f)
         # Plot Testing loss
         plt.figure(2)
         means, stdevs, mins, maxs = get_stats([x["test_loss"] for x in results])
         plot(means, stdevs, mins, maxs, "Testing Loss", folder, "upper right")
+        with open(os.path.join(path, "test_loss_" + folder + ".json"), "w") as f:
+            json.dump({"mean": means, "std": stdevs}, f)
         # Plot Testing Accuracy
         plt.figure(3)
         means, stdevs, mins, maxs = get_stats([x["test_acc"] for x in results])
         plot(means, stdevs, mins, maxs, "Testing Accuracy", folder, "lower right")
+        with open(os.path.join(path, "test_acc_" + folder + ".json"), "w") as f:
+            json.dump({"mean": means, "std": stdevs}, f)
         plt.figure(6)
         means, stdevs, mins, maxs = get_stats([x["grad_std"] for x in results])
         plot(

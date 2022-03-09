@@ -17,6 +17,9 @@ class Model(nn.Module):
         self.accumulated_gradients = []
         self._param_count_ot = None
         self._param_count_total = None
+        self.accumulated_frequency = None
+        self.prev_model_params = None
+        self.prev = None
 
     def count_params(self, only_trainable=False):
         """

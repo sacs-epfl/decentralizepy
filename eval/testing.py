@@ -24,7 +24,8 @@ def read_ini(file_path):
 if __name__ == "__main__":
     args = utils.get_args()
 
-    Path(args.log_dir).mkdir(parents=True, exist_ok=True)
+    # prevents accidental log overwrites
+    Path(args.log_dir).mkdir(parents=True, exist_ok=False)
 
     log_level = {
         "INFO": logging.INFO,
