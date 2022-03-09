@@ -124,7 +124,10 @@ class Node:
         """
         dataset_module = importlib.import_module(dataset_configs["dataset_package"])
         self.dataset_class = getattr(dataset_module, dataset_configs["dataset_class"])
-        torch.manual_seed(dataset_configs["random_seed"])
+        random_seed = (
+            dataset_configs["random_seed"] if "random_seed" in dataset_configs else 97
+        )
+        torch.manual_seed(random_seed)
         self.dataset_params = utils.remove_keys(
             dataset_configs,
             ["dataset_package", "dataset_class", "model_class", "random_seed"],
