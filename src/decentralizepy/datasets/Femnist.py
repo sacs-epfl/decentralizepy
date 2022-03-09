@@ -3,7 +3,6 @@ import logging
 import os
 from collections import defaultdict
 
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn.functional as F

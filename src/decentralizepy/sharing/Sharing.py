@@ -1,8 +1,6 @@
 import logging
-import pickle
 from collections import deque
 
-import numpy
 import torch
 
 
