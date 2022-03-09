@@ -4,7 +4,6 @@ import os
 from pathlib import Path
 
 import torch
-import numpy as np
 
 from decentralizepy.sharing.Sharing import Sharing
 
@@ -202,7 +201,7 @@ class SubSampling(Sharing):
 
             m["seed"] = seed
             m["alpha"] = alpha
-            m["params"] = subsample.numpy().astype(np.int32)
+            m["params"] = subsample.numpy()
 
             # logging.info("Converted dictionary to json")
             self.total_data += len(self.communication.encrypt(m["params"]))

@@ -4,9 +4,9 @@ import os
 from pathlib import Path
 from time import time
 
+import numpy as np
 import torch
 import torch.fft as fft
-import numpy as np
 
 from decentralizepy.sharing.Sharing import Sharing
 
