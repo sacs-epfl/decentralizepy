@@ -21,4 +21,4 @@ log_dir=$log_dir_base$m
 
 cp $original_config $config_file
 # echo "alpha = 0.10" >> $config_file
-$env_python $eval_file -ld $log_dir -mid $m -ps $procs_per_machine -ms $machines -is $iterations -gf $graph -ta $test_after -cf $config_file -ll $log_level
+$env_python $eval_file -ro 0 -ld $log_dir -mid $m -ps $procs_per_machine -ms $machines -is $iterations -gf $graph -ta $test_after -cf $config_file -ll $log_level
