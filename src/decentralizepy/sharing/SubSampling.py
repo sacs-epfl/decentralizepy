@@ -1,11 +1,10 @@
-import base64
 import json
 import logging
 import os
-import pickle
 from pathlib import Path
 
 import torch
+import numpy as np
 
 from decentralizepy.sharing.Sharing import Sharing
 
@@ -203,7 +202,7 @@ class SubSampling(Sharing):
 
             m["seed"] = seed
             m["alpha"] = alpha
-            m["params"] = subsample.numpy()
+            m["params"] = subsample.numpy().astype(np.int32)
 
             # logging.info("Converted dictionary to json")
             self.total_data += len(self.communication.encrypt(m["params"]))

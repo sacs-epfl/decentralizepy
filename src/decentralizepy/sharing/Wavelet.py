@@ -1,11 +1,10 @@
-import base64
 import json
 import logging
 import os
-import pickle
 from pathlib import Path
 from time import time
 
+import numpy as np
 import pywt
 import torch
 
@@ -206,7 +205,7 @@ class Wavelet(Sharing):
 
             m["params"] = topk.numpy()
 
-            m["indices"] = indices.numpy()
+            m["indices"] = indices.numpy().astype(np.int32)
 
             self.total_data += len(self.communication.encrypt(m["params"]))
             self.total_meta += len(self.communication.encrypt(m["indices"])) + len(
@@ -255,7 +254,7 @@ class Wavelet(Sharing):
             params = m["params"]
 
             params_tensor = torch.tensor(params)
-            indices_tensor = torch.tensor(indices)
+            indices_tensor = torch.tensor(indices, dtype=torch.long)
             ret = dict()
             ret["indices"] = indices_tensor
             ret["params"] = params_tensor

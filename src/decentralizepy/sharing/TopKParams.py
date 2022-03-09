@@ -3,6 +3,7 @@ import logging
 import os
 from pathlib import Path
 
+import numpy as np
 import torch
 
 from decentralizepy.sharing.Sharing import Sharing
@@ -157,7 +158,7 @@ class TopKParams(Sharing):
             if not self.dict_ordered:
                 raise NotImplementedError
 
-            m["indices"] = index.numpy()
+            m["indices"] = index.numpy().astype(np.int32)
             m["params"] = values.numpy()
             m["offsets"] = offsets
 
@@ -206,7 +207,7 @@ class TopKParams(Sharing):
             tensors_to_cat = []
             offsets = m["offsets"]
             params = torch.tensor(m["params"])
-            indices = torch.tensor(m["indices"])
+            indices = torch.tensor(m["indices"], dtype=torch.long)
 
             for i, (_, v) in enumerate(state_dict.items()):
                 shapes.append(v.shape)

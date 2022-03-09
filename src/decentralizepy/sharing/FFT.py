@@ -1,13 +1,12 @@
-import base64
 import json
 import logging
 import os
-import pickle
 from pathlib import Path
 from time import time
 
 import torch
 import torch.fft as fft
+import numpy as np
 
 from decentralizepy.sharing.Sharing import Sharing
 
@@ -182,7 +181,7 @@ class FFT(Sharing):
 
             m["alpha"] = self.alpha
             m["params"] = topk.numpy()
-            m["indices"] = indices.numpy()
+            m["indices"] = indices.numpy().astype(np.int32)
 
             self.total_data += len(self.communication.encrypt(m["params"]))
             self.total_meta += len(self.communication.encrypt(m["indices"])) + len(
@@ -215,23 +214,12 @@ class FFT(Sharing):
             if not self.dict_ordered:
                 raise NotImplementedError
 
-            shapes = []
-            lens = []
-            tensors_to_cat = []
-            for _, v in state_dict.items():
-                shapes.append(v.shape)
-                t = v.flatten()
-                lens.append(t.shape[0])
-                tensors_to_cat.append(t)
-
-            T = torch.cat(tensors_to_cat, dim=0)
-
             indices = m["indices"]
             alpha = m["alpha"]
             params = m["params"]
 
             params_tensor = torch.tensor(params)
-            indices_tensor = torch.tensor(indices)
+            indices_tensor = torch.tensor(indices, dtype=torch.long)
             ret = dict()
             ret["indices"] = indices_tensor
             ret["params"] = params_tensor

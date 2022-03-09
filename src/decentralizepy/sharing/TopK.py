@@ -3,6 +3,7 @@ import logging
 import os
 from pathlib import Path
 
+import numpy as np
 import torch
 
 from decentralizepy.sharing.Sharing import Sharing
@@ -166,7 +167,7 @@ class TopK(Sharing):
             if not self.dict_ordered:
                 raise NotImplementedError
 
-            m["indices"] = G_topk.numpy()
+            m["indices"] = G_topk.numpy().astype(np.int32)
             m["params"] = T_topk.numpy()
 
             assert len(m["indices"]) == len(m["params"])
@@ -214,7 +215,7 @@ class TopK(Sharing):
                 tensors_to_cat.append(t)
 
             T = torch.cat(tensors_to_cat, dim=0)
-            index_tensor = torch.tensor(m["indices"])
+            index_tensor = torch.tensor(m["indices"], dtype=torch.long)
             logging.debug("Original tensor: {}".format(T[index_tensor]))
             T[index_tensor] = torch.tensor(m["params"])
             logging.debug("Final tensor: {}".format(T[index_tensor]))
