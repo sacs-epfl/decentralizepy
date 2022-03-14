@@ -91,23 +91,31 @@ class FrequencyWaveletAccumulator(Training):
         """
 
         # this looks at the change from the last round averaging of the frequencies
-        tensors_to_cat = [v.data.flatten() for _, v in self.model.state_dict().items()]
-        concated = torch.cat(tensors_to_cat, dim=0)
-        coeff = pywt.wavedec(concated.numpy(), self.wavelet, level=self.level)
-        data, coeff_slices = pywt.coeffs_to_array(coeff)
-        data = data.ravel()
-        if self.accumulation:
-            if self.model.accumulated_frequency is None:
-                logging.info("Initialize wavelet frequency accumulation")
-                self.model.accumulated_frequency = np.zeros_like(
-                    data
-                )  # torch.zeros_like(data)
-                self.model.prev = data
-            else:
-                logging.info("wavelet frequency accumulation step")
-                self.model.accumulated_frequency += data - self.model.prev
-                self.model.prev = data
-        else:
-            logging.info("wavelet frequency accumulation reset")
-            self.model.accumulated_frequency = data
+        with torch.no_grad():
+            self.model.accumulated_gradients = []
+            tensors_to_cat = [v.data.flatten() for _, v in self.model.state_dict().items()]
+            concated = torch.cat(tensors_to_cat, dim=0)
+            coeff = pywt.wavedec(concated.numpy(), self.wavelet, level=self.level)
+            data, coeff_slices = pywt.coeffs_to_array(coeff)
+            self.init_model = torch.from_numpy(data.ravel())
+            if self.accumulation:
+                if self.model.accumulated_changes is None:
+                    self.model.accumulated_changes = torch.zeros_like(self.init_model)
+                    self.prev = self.init_model
+                else:
+                    self.model.accumulated_changes += (self.init_model - self.prev)
+                    self.prev = self.init_model
+
         super().train(dataset)
+
+        with torch.no_grad():
+            tensors_to_cat = [v.data.flatten() for _, v in self.model.state_dict().items()]
+            concated = torch.cat(tensors_to_cat, dim=0)
+            coeff = pywt.wavedec(concated.numpy(), self.wavelet, level=self.level)
+            data, coeff_slices = pywt.coeffs_to_array(coeff)
+            end_model = torch.from_numpy(data.ravel())
+            change = end_model - self.init_model
+            if self.accumulation:
+                change += self.model.accumulated_changes
+
+            self.model.accumulated_gradients.append(change)

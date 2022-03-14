@@ -124,6 +124,7 @@ class PartialModel(Sharing):
         with torch.no_grad():
             _, G_topk = self.extract_top_gradients()
 
+            self.model.rewind_accumulation(G_topk)
             if self.save_shared:
                 shared_params = dict()
                 shared_params["order"] = list(self.model.state_dict().keys())

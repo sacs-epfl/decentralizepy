@@ -71,6 +71,8 @@ class FrequencyAccumulator(Training):
             shuffle,
         )
         self.accumulation = accumulation
+        self.init_model = None
+        self.prev = None
 
     def train(self, dataset):
         """
@@ -84,22 +86,27 @@ class FrequencyAccumulator(Training):
             The training dataset. Should implement get_trainset(batch_size, shuffle)
 
         """
-
-        # this looks at the change from the last round averaging of the frequencies
-        tensors_to_cat = [v.data.flatten() for _, v in self.model.state_dict().items()]
-        concated = torch.cat(tensors_to_cat, dim=0)
-        flat_fft = fft.rfft(concated)
-        if self.accumulation:
-            if self.model.accumulated_frequency is None:
-                logging.info("Initialize fft frequency accumulation")
-                self.model.accumulated_frequency = torch.zeros_like(flat_fft)
-                self.model.prev = flat_fft
-            else:
-                logging.info("fft frequency accumulation step")
-                self.model.accumulated_frequency += flat_fft - self.model.prev
-                self.model.prev = flat_fft
-        else:
-            logging.info("fft frequency accumulation reset")
-            self.model.accumulated_frequency = flat_fft
+        with torch.no_grad():
+            self.model.accumulated_gradients = []
+            tensors_to_cat = [v.data.flatten() for _, v in self.model.state_dict().items()]
+            concated = torch.cat(tensors_to_cat, dim=0)
+            self.init_model = fft.rfft(concated)
+            if self.accumulation:
+                if self.model.accumulated_changes is None:
+                    self.model.accumulated_changes = torch.zeros_like(self.init_model)
+                    self.prev = self.init_model
+                else:
+                    self.model.accumulated_changes += (self.init_model - self.prev)
+                    self.prev = self.init_model
 
         super().train(dataset)
+
+        with torch.no_grad():
+            tensors_to_cat = [v.data.flatten() for _, v in self.model.state_dict().items()]
+            concated = torch.cat(tensors_to_cat, dim=0)
+            end_model = fft.rfft(concated)
+            change = end_model - self.init_model
+            if self.accumulation:
+                change += self.model.accumulated_changes
+
+            self.model.accumulated_gradients.append(change)

@@ -13,11 +13,10 @@ iterations=200
 test_after=10
 eval_file=testing.py
 log_level=INFO
-log_dir_base=/mnt/nfs/some_user/logs/test
 
 m=`cat $(grep addresses_filepath $original_config | awk '{print $3}') | grep $(/sbin/ifconfig ens785 | grep 'inet ' | awk '{print $2}') | cut -d'"' -f2`
-
-log_dir=$log_dir_base$m
+log_dir=$(date '+%Y-%m-%dT%H:%M')/machine$m
+mkdir -p $log_dir
 
 cp $original_config $config_file
 # echo "alpha = 0.10" >> $config_file

@@ -114,27 +114,19 @@ class FFT(Sharing):
         logging.info("Returning fft compressed model weights")
         tensors_to_cat = [v.data.flatten() for _, v in self.model.state_dict().items()]
         concated = torch.cat(tensors_to_cat, dim=0)
-
+        flat_fft = fft.rfft(concated)
         if self.change_based_selection:
-            flat_fft = fft.rfft(concated)
-            if self.accumulation:
-                logging.info(
-                    "fft topk extract frequencies based on accumulated model frequency change"
-                )
-                diff = self.model.accumulated_frequency + (flat_fft - self.model.prev)
-            else:
-                diff = flat_fft - self.model.accumulated_frequency
+
+            assert len(self.model.accumulated_gradients) == 1
+            diff = self.model.accumulated_gradients[0]
             _, index = torch.topk(
                 diff.abs(), round(self.alpha * len(flat_fft)), dim=0, sorted=False
             )
         else:
-            flat_fft = fft.rfft(concated)
             _, index = torch.topk(
                 flat_fft.abs(), round(self.alpha * len(flat_fft)), dim=0, sorted=False
             )
 
-        if self.accumulation:
-            self.model.accumulated_frequency[index] = 0.0
         return flat_fft[index], index
 
     def serialized_model(self):
@@ -152,6 +144,8 @@ class FFT(Sharing):
 
         with torch.no_grad():
             topk, indices = self.apply_fft()
+
+            self.model.rewind_accumulation(indices)
 
             if self.save_shared:
                 shared_params = dict()

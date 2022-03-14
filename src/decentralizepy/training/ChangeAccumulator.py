@@ -28,6 +28,7 @@ class ChangeAccumulator(Training):
         batch_size="",
         shuffle="",
         save_accumulated="",
+        accumulation=True,
     ):
         """
         Constructor
@@ -58,6 +59,8 @@ class ChangeAccumulator(Training):
             True if the dataset should be shuffled before training.
         save_accumulated : bool
             True if accumulated weight change should be written to file
+        accumulation : bool
+            True if the model change should be accumulated across communication steps
 
         """
         super().__init__(
@@ -85,6 +88,9 @@ class ChangeAccumulator(Training):
                 self.log_dir, "model_val/{}".format(self.rank)
             )
             Path(self.model_val_path).mkdir(parents=True, exist_ok=True)
+        self.accumulation = accumulation
+        self.init_model = None
+        self.prev = None
 
     def save_vector(self, v, s):
         """
@@ -152,12 +158,31 @@ class ChangeAccumulator(Training):
             k: v.data.clone().detach()
             for k, v in zip(self.model.state_dict(), self.model.parameters())
         }
+        if self.accumulation:
+            if self.model.accumulated_changes is None:
+                flats = [v.data.flatten() for _, v in self.init_model.items()]
+                flat = torch.cat(flats)
+                self.model.accumulated_changes = torch.zeros_like(flat)
+                self.prev = flat
+            else:
+                flats = [v.data.flatten() for _, v in self.init_model.items()]
+                flat = torch.cat(flats)
+                self.model.accumulated_changes += (flat - self.prev)
+                self.prev = flat
+
         super().train(dataset)
         with torch.no_grad():
             change = {
                 k: v.data.clone().detach() - self.init_model[k]
                 for k, v in zip(self.model.state_dict(), self.model.parameters())
             }
+            if self.accumulation:
+                flats_change = [v.data.flatten() for _, v in change.items()]
+                flat_change = torch.cat(flats_change)
+                # flatten does not copy data if input is already flattened
+                # however cat copies
+                change = {"flat" : self.model.accumulated_changes + flat_change}
+
             self.model.accumulated_gradients.append(change)
 
             if self.save_accumulated:

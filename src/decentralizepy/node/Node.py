@@ -93,7 +93,7 @@ class Node:
         graph : decentralizepy.graphs
             The object containing the global graph
         iterations : int
-            Number of iterations (communication steps) ) for which the model should be trained
+            Number of iterations (communication steps) for which the model should be trained
         log_dir : str
             Logging directory
         reset_optimizer : int
@@ -281,7 +281,7 @@ class Node:
         config : dict
             A dictionary of configurations.
         iterations : int
-            Number of iterations (communication steps) ) for which the model should be trained
+            Number of iterations (communication steps) for which the model should be trained
         log_dir : str
             Logging directory
         log_level : logging.Level
@@ -448,7 +448,7 @@ class Node:
                 epochs_per_round = 25
                 batch_size = 64
         iterations : int
-            Number of iterations (communication steps) ) for which the model should be trained
+            Number of iterations (communication steps) for which the model should be trained
         log_dir : str
             Logging directory
         log_level : logging.Level

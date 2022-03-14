@@ -122,32 +122,23 @@ class Wavelet(Sharing):
         logging.info("Returning dwt compressed model weights")
         tensors_to_cat = [v.data.flatten() for _, v in self.model.state_dict().items()]
         concated = torch.cat(tensors_to_cat, dim=0)
-        if self.change_based_selection:
-            coeff = pywt.wavedec(concated.numpy(), self.wavelet, level=self.level)
-            data, coeff_slices = pywt.coeffs_to_array(
-                coeff
-            )  # coeff_slices will be reproduced on the receiver
-            data = data.ravel()
 
-            if self.accumulation:
-                logging.info(
-                    "wavelet topk extract frequencies based on accumulated model frequency change"
-                )
-                diff = self.model.accumulated_frequency + (data - self.model.prev)
-            else:
-                diff = data - self.model.accumulated_frequency
+        coeff = pywt.wavedec(concated.numpy(), self.wavelet, level=self.level)
+        data, coeff_slices = pywt.coeffs_to_array(
+            coeff
+        )  # coeff_slices will be reproduced on the receiver
+        data = data.ravel()
+
+        if self.change_based_selection:
+            assert len(self.model.accumulated_gradients) == 1
+            diff = self.model.accumulated_gradients[0]
             _, index = torch.topk(
-                torch.from_numpy(diff).abs(),
+                diff.abs(),
                 round(self.alpha * len(data)),
                 dim=0,
                 sorted=False,
             )
         else:
-            coeff = pywt.wavedec(concated.numpy(), self.wavelet, level=self.level)
-            data, coeff_slices = pywt.coeffs_to_array(
-                coeff
-            )  # coeff_slices will be reproduced on the receiver
-            data = data.ravel()
             _, index = torch.topk(
                 torch.from_numpy(data).abs(),
                 round(self.alpha * len(data)),
@@ -155,8 +146,6 @@ class Wavelet(Sharing):
                 sorted=False,
             )
 
-        if self.accumulation:
-            self.model.accumulated_frequency[index] = 0.0
         return torch.from_numpy(data[index]), index
 
     def serialized_model(self):
@@ -174,6 +163,8 @@ class Wavelet(Sharing):
 
         with torch.no_grad():
             topk, indices = self.apply_wavelet()
+
+            self.model.rewind_accumulation(indices)
 
             if self.save_shared:
                 shared_params = dict()
