@@ -167,7 +167,7 @@ class ChangeAccumulator(Training):
             else:
                 flats = [v.data.flatten() for _, v in self.init_model.items()]
                 flat = torch.cat(flats)
-                self.model.accumulated_changes += (flat - self.prev)
+                self.model.accumulated_changes += flat - self.prev
                 self.prev = flat
 
         super().train(dataset)
@@ -181,7 +181,7 @@ class ChangeAccumulator(Training):
                 flat_change = torch.cat(flats_change)
                 # flatten does not copy data if input is already flattened
                 # however cat copies
-                change = {"flat" : self.model.accumulated_changes + flat_change}
+                change = {"flat": self.model.accumulated_changes + flat_change}
 
             self.model.accumulated_gradients.append(change)
 

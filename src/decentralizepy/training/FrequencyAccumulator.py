@@ -88,7 +88,9 @@ class FrequencyAccumulator(Training):
         """
         with torch.no_grad():
             self.model.accumulated_gradients = []
-            tensors_to_cat = [v.data.flatten() for _, v in self.model.state_dict().items()]
+            tensors_to_cat = [
+                v.data.flatten() for _, v in self.model.state_dict().items()
+            ]
             concated = torch.cat(tensors_to_cat, dim=0)
             self.init_model = fft.rfft(concated)
             if self.accumulation:
@@ -96,13 +98,15 @@ class FrequencyAccumulator(Training):
                     self.model.accumulated_changes = torch.zeros_like(self.init_model)
                     self.prev = self.init_model
                 else:
-                    self.model.accumulated_changes += (self.init_model - self.prev)
+                    self.model.accumulated_changes += self.init_model - self.prev
                     self.prev = self.init_model
 
         super().train(dataset)
 
         with torch.no_grad():
-            tensors_to_cat = [v.data.flatten() for _, v in self.model.state_dict().items()]
+            tensors_to_cat = [
+                v.data.flatten() for _, v in self.model.state_dict().items()
+            ]
             concated = torch.cat(tensors_to_cat, dim=0)
             end_model = fft.rfft(concated)
             change = end_model - self.init_model
