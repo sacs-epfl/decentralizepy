@@ -106,6 +106,26 @@ class Wavelet(Sharing):
             Path(self.folder_path).mkdir(parents=True, exist_ok=True)
 
         self.change_based_selection = change_based_selection
+        self.accumulation = accumulation
+
+        # getting the initial model
+        with torch.no_grad():
+            self.model.accumulated_gradients = []
+            tensors_to_cat = [
+                v.data.flatten() for _, v in self.model.state_dict().items()
+            ]
+            concated = torch.cat(tensors_to_cat, dim=0)
+            coeff = pywt.wavedec(concated.numpy(), self.wavelet, level=self.level)
+            data, coeff_slices = pywt.coeffs_to_array(coeff)
+            self.init_model = torch.from_numpy(data.ravel())
+            self.prev = None
+            if self.accumulation:
+                if self.model.accumulated_changes is None:
+                    self.model.accumulated_changes = torch.zeros_like(self.init_model)
+                    self.prev = self.init_model
+                else:
+                    self.model.accumulated_changes += self.init_model - self.prev
+                    self.prev = self.init_model
 
     def apply_wavelet(self):
         """
@@ -257,6 +277,29 @@ class Wavelet(Sharing):
 
         """
         t_start = time()
+        shapes = []
+        lens = []
+        end_model = None
+        change = 0
+        self.model.accumulated_gradients = []
+        with torch.no_grad():
+            # FFT of this model
+            tensors_to_cat = []
+            for _, v in self.model.state_dict().items():
+                shapes.append(v.shape)
+                t = v.flatten()
+                lens.append(t.shape[0])
+                tensors_to_cat.append(t)
+            concated = torch.cat(tensors_to_cat, dim=0)
+            coeff = pywt.wavedec(concated.numpy(), self.wavelet, level=self.level)
+            data, coeff_slices = pywt.coeffs_to_array(coeff)
+            shape = data.shape
+            wt_params = data.ravel()
+            end_model = torch.from_numpy(wt_params)
+            change = end_model - self.init_model
+            if self.accumulation:
+                change += self.model.accumulated_changes
+            self.model.accumulated_gradients.append(change)
         data = self.serialized_model()
         t_post_serialize = time()
         my_uid = self.mapping.get_uid(self.rank, self.machine_id)
@@ -286,24 +329,6 @@ class Wavelet(Sharing):
         logging.info("Starting model averaging after receiving from all neighbors")
         total = None
         weight_total = 0
-
-        # FFT of this model
-        shapes = []
-        lens = []
-        tensors_to_cat = []
-        # TODO: should we detach
-        for _, v in self.model.state_dict().items():
-            shapes.append(v.shape)
-            t = v.flatten()
-            lens.append(t.shape[0])
-            tensors_to_cat.append(t)
-        concated = torch.cat(tensors_to_cat, dim=0)
-        coeff = pywt.wavedec(concated.numpy(), self.wavelet, level=self.level)
-        wt_params, coeff_slices = pywt.coeffs_to_array(
-            coeff
-        )  # coeff_slices will be reproduced on the receiver
-        shape = wt_params.shape
-        wt_params = wt_params.ravel()
 
         for i, n in enumerate(self.peer_deques):
             degree, iteration, data = self.peer_deques[n].popleft()
@@ -347,6 +372,19 @@ class Wavelet(Sharing):
         logging.info("Model averaging complete")
 
         self.communication_round += 1
+
+        with torch.no_grad():
+            self.model.accumulated_gradients = []
+            tensors_to_cat = [
+                v.data.flatten() for _, v in self.model.state_dict().items()
+            ]
+            concated = torch.cat(tensors_to_cat, dim=0)
+            coeff = pywt.wavedec(concated.numpy(), self.wavelet, level=self.level)
+            data, coeff_slices = pywt.coeffs_to_array(coeff)
+            self.init_model = torch.from_numpy(data.ravel())
+            if self.accumulation:
+                self.model.accumulated_changes += self.init_model - self.prev
+                self.prev = self.init_model
 
         t_end = time()
 
