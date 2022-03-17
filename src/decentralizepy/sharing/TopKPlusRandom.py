@@ -84,16 +84,8 @@ class TopKPlusRandom(PartialModel):
             (a,b). a: The magnitudes of the topK gradients, b: Their indices.
 
         """
-        logging.info("Summing up gradients")
-        assert len(self.model.accumulated_gradients) > 0
-        gradient_sum = self.model.accumulated_gradients[0]
-        for i in range(1, len(self.model.accumulated_gradients)):
-            for key in self.model.accumulated_gradients[i]:
-                gradient_sum[key] += self.model.accumulated_gradients[i][key]
-
         logging.info("Returning topk gradients")
-        tensors_to_cat = [v.data.flatten() for _, v in gradient_sum.items()]
-        G = torch.abs(torch.cat(tensors_to_cat, dim=0))
+        G = torch.abs(self.model.model_change)
         std, mean = torch.std_mean(G, unbiased=False)
         self.std = std.item()
         self.mean = mean.item()

@@ -65,3 +65,4 @@ if __name__ == "__main__":
             args.reset_optimizer,
         ],
     )
+    print("after spawn")

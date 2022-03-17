@@ -108,3 +108,17 @@ def write_args(args, path):
     }
     with open(os.path.join(path, "args.json"), "w") as of:
         json.dump(data, of)
+
+def identity(obj):
+    """
+    Identity function
+    Parameters
+    ----------
+    obj
+        Some object
+    Returns
+    -------
+     obj
+        The same object
+    """
+    return obj

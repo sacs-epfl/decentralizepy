@@ -31,7 +31,7 @@ class Sharing:
         model : decentralizepy.models.Model
             Model to train
         dataset : decentralizepy.datasets.Dataset
-            Dataset for sharing data. Not implemented yer! TODO
+            Dataset for sharing data. Not implemented yet! TODO
         log_dir : str
             Location to write shared_params (only writing for 2 procs per machine)
 
@@ -122,11 +122,53 @@ class Sharing:
             state_dict[key] = torch.from_numpy(value)
         return state_dict
 
+    def _pre_step(self):
+        """
+        Called at the beginning of step.
+
+        """
+        pass
+
+    def _post_step(self):
+        """
+        Called at the end of step.
+
+        """
+        pass
+
+    def _averaging(self):
+        """
+        Averages the received model with the local model
+
+        """
+        with torch.no_grad():
+            total = dict()
+            weight_total = 0
+            for i, n in enumerate(self.peer_deques):
+                degree, iteration, data = self.peer_deques[n].popleft()
+                logging.debug(
+                    "Averaging model from neighbor {} of iteration {}".format(n, iteration)
+                )
+                data = self.deserialized_model(data)
+                weight = 1 / (max(len(self.peer_deques), degree) + 1)  # Metro-Hastings
+                weight_total += weight
+                for key, value in data.items():
+                    if key in total:
+                        total[key] += value * weight
+                    else:
+                        total[key] = value * weight
+
+            for key, value in self.model.state_dict().items():
+                total[key] += (1 - weight_total) * value  # Metro-Hastings
+
+        self.model.load_state_dict(total)
+
     def step(self):
         """
         Perform a sharing step. Implements D-PSGD.
 
         """
+        self._pre_step()
         data = self.serialized_model()
         my_uid = self.mapping.get_uid(self.rank, self.machine_id)
         all_neighbors = self.graph.neighbors(my_uid)
@@ -152,27 +194,8 @@ class Sharing:
             )
 
         logging.info("Starting model averaging after receiving from all neighbors")
-        total = dict()
-        weight_total = 0
-        for i, n in enumerate(self.peer_deques):
-            degree, iteration, data = self.peer_deques[n].popleft()
-            logging.debug(
-                "Averaging model from neighbor {} of iteration {}".format(n, iteration)
-            )
-            data = self.deserialized_model(data)
-            weight = 1 / (max(len(self.peer_deques), degree) + 1)  # Metro-Hastings
-            weight_total += weight
-            for key, value in data.items():
-                if key in total:
-                    total[key] += value * weight
-                else:
-                    total[key] = value * weight
-
-        for key, value in self.model.state_dict().items():
-            total[key] += (1 - weight_total) * value  # Metro-Hastings
-
-        self.model.load_state_dict(total)
-
+        self._averaging()
         logging.info("Model averaging complete")
 
         self.communication_round += 1
+        self._post_step()

@@ -7,6 +7,7 @@ import numpy as np
 import torch
 
 from decentralizepy.sharing.Sharing import Sharing
+from decentralizepy.utils import conditional_value, identity
 
 
 class PartialModel(Sharing):
@@ -29,6 +30,9 @@ class PartialModel(Sharing):
         dict_ordered=True,
         save_shared=False,
         metadata_cap=1.0,
+        accumulation = False,
+        save_accumulated="",
+        change_transformer = identity
     ):
         """
         Constructor
@@ -59,6 +63,13 @@ class PartialModel(Sharing):
             Specifies if the indices of shared parameters should be logged
         metadata_cap : float
             Share full model when self.alpha > metadata_cap
+        accumulation : bool
+            True if the the indices to share should be selected based on accumulated frequency change
+        save_accumulated : bool
+            True if accumulated weight change should be written to file. In case of accumulation the accumulated change
+            is stored. If a change_transformer is used then the transformed change is stored.
+        change_transformer : (x: Tensor) -> Tensor
+            A function that transforms the model change into other domains. Default: identity function
 
         """
         super().__init__(
@@ -69,6 +80,35 @@ class PartialModel(Sharing):
         self.save_shared = save_shared
         self.metadata_cap = metadata_cap
         self.total_meta = 0
+        self.accumulation = accumulation
+        self.save_accumulated = conditional_value(save_accumulated, "", False)
+        self.change_transformer = change_transformer
+
+        # getting the initial model
+        self.shapes = []
+        self.lens = []
+        with torch.no_grad():
+            tensors_to_cat = []
+            for _, v in self.model.state_dict().items():
+                self.shapes.append(v.shape)
+                t = v.flatten()
+                self.lens.append(t.shape[0])
+                tensors_to_cat.append(t)
+            self.init_model = torch.cat(tensors_to_cat, dim=0)
+            if self.accumulation:
+                self.model.accumulated_changes = torch.zeros_like(self.change_transformer(self.init_model))
+                self.prev = self.init_model
+                
+        if self.save_accumulated:
+            self.model_change_path = os.path.join(
+                self.log_dir, "model_change/{}".format(self.rank)
+            )
+            Path(self.model_change_path).mkdir(parents=True, exist_ok=True)
+
+            self.model_val_path = os.path.join(
+                self.log_dir, "model_val/{}".format(self.rank)
+            )
+            Path(self.model_val_path).mkdir(parents=True, exist_ok=True)
 
         # Only save for 2 procs: Save space
         if self.save_shared and not (rank == 0 or rank == 1):
@@ -91,16 +131,9 @@ class PartialModel(Sharing):
             (a,b). a: The magnitudes of the topK gradients, b: Their indices.
 
         """
-        logging.info("Summing up gradients")
-        assert len(self.model.accumulated_gradients) > 0
-        gradient_sum = self.model.accumulated_gradients[0]
-        for i in range(1, len(self.model.accumulated_gradients)):
-            for key in self.model.accumulated_gradients[i]:
-                gradient_sum[key] += self.model.accumulated_gradients[i][key]
 
         logging.info("Returning topk gradients")
-        tensors_to_cat = [v.data.flatten() for _, v in gradient_sum.items()]
-        G_topk = torch.abs(torch.cat(tensors_to_cat, dim=0))
+        G_topk = torch.abs(self.model.model_change)
         std, mean = torch.std_mean(G_topk, unbiased=False)
         self.std = std.item()
         self.mean = mean.item()
@@ -123,8 +156,8 @@ class PartialModel(Sharing):
 
         with torch.no_grad():
             _, G_topk = self.extract_top_gradients()
-
-            self.model.rewind_accumulation(G_topk)
+            if self.accumulation:
+                self.model.rewind_accumulation(G_topk)
             if self.save_shared:
                 shared_params = dict()
                 shared_params["order"] = list(self.model.state_dict().keys())
@@ -219,3 +252,77 @@ class PartialModel(Sharing):
                 start_index = end_index
 
             return state_dict
+
+    def _pre_step(self):
+        """
+        Called at the beginning of step.
+
+        """
+        logging.info("PartialModel _pre_step")
+        with torch.no_grad():
+            tensors_to_cat = [
+                v.data.flatten() for _, v in self.model.state_dict().items()
+            ]
+            pre_share_model = torch.cat(tensors_to_cat, dim=0)
+            change = self.change_transformer(pre_share_model - self.init_model)
+            if self.accumulation:
+                change += self.model.accumulated_changes
+            # stores change of the model due to training, change due to averaging is not accounted
+            self.model.model_change = change
+
+    def _post_step(self):
+        """
+        Called at the end of step.
+
+        """
+        logging.info("PartialModel _post_step")
+        with torch.no_grad():
+            self.model.model_change = None
+            tensors_to_cat = [
+                v.data.flatten() for _, v in self.model.state_dict().items()
+            ]
+            post_share_model = torch.cat(tensors_to_cat, dim=0)
+            self.init_model = post_share_model
+            if self.accumulation:
+                self.model.accumulated_changes += self.change_transformer(self.init_model - self.prev)
+                self.prev = self.init_model
+
+        if self.save_accumulated:
+            self.save_change()
+
+    def save_vector(self, v, s):
+        """
+        Saves the given vector to the file.
+
+        Parameters
+        ----------
+        v : torch.tensor
+            The torch tensor to write to file
+        s : str
+            Path to folder to write to
+
+        """
+        output_dict = dict()
+        output_dict["order"] = list(self.model.state_dict().keys())
+        shapes = dict()
+        for k, v1 in self.model.state_dict().items():
+            shapes[k] = list(v1.shape)
+        output_dict["shapes"] = shapes
+
+        output_dict["tensor"] = v.tolist()
+
+        with open(
+            os.path.join(
+                s,
+                "{}.json".format(self.communication_round + 1),
+            ),
+            "w",
+        ) as of:
+            json.dump(output_dict, of)
+
+    def save_change(self):
+        """
+        Saves the change and the gradient values for every iteration
+
+        """
+        self.save_vector(self.model.model_change, self.model_change_path)

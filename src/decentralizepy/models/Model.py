@@ -14,7 +14,7 @@ class Model(nn.Module):
 
         """
         super().__init__()
-        self.accumulated_gradients = []
+        self.model_change = None
         self._param_count_ot = None
         self._param_count_total = None
         self.accumulated_changes = None

@@ -8,10 +8,26 @@ import numpy as np
 import torch
 import torch.fft as fft
 
-from decentralizepy.sharing.Sharing import Sharing
+from decentralizepy.sharing.PartialModel import PartialModel
 
 
-class FFT(Sharing):
+def change_transformer_fft(x):
+    """
+    Transforms the model changes into frequency domain
+
+    Parameters
+    ----------
+    x : torch.Tensor
+        Model change in the space domain
+
+    Returns
+    -------
+    x : torch.Tensor
+        Representation of the change int the frequency domain
+    """
+    return fft.rfft(x)
+
+class FFT(PartialModel):
     """
     This class implements the fft version of model sharing
     It is based on PartialModel.py
@@ -32,8 +48,8 @@ class FFT(Sharing):
         dict_ordered=True,
         save_shared=False,
         metadata_cap=1.0,
-        pickle=True,
         change_based_selection=True,
+        save_accumulated="",
         accumulation=True,
     ):
         """
@@ -65,56 +81,19 @@ class FFT(Sharing):
             Specifies if the indices of shared parameters should be logged
         metadata_cap : float
             Share full model when self.alpha > metadata_cap
-        pickle : bool
-            use pickle to serialize the model parameters
         change_based_selection : bool
             use frequency change to select topk frequencies
+        save_accumulated : bool
+            True if accumulated weight change in the frequency domain should be written to file. In case of accumulation
+            the accumulated change is stored.
         accumulation : bool
             True if the the indices to share should be selected based on accumulated frequency change
         """
         super().__init__(
-            rank, machine_id, communication, mapping, graph, model, dataset, log_dir
+            rank, machine_id, communication, mapping, graph, model, dataset, log_dir, alpha, dict_ordered, save_shared,
+            metadata_cap, accumulation, save_accumulated, change_transformer_fft
         )
-        self.alpha = alpha
-        self.dict_ordered = dict_ordered
-        self.save_shared = save_shared
-        self.metadata_cap = metadata_cap
-        self.total_meta = 0
-
-        self.pickle = pickle
-
-        logging.info("subsampling pickling=" + str(pickle))
-
-        if self.save_shared:
-            # Only save for 2 procs: Save space
-            if rank != 0 or rank != 1:
-                self.save_shared = False
-
-        if self.save_shared:
-            self.folder_path = os.path.join(
-                self.log_dir, "shared_params/{}".format(self.rank)
-            )
-            Path(self.folder_path).mkdir(parents=True, exist_ok=True)
-
         self.change_based_selection = change_based_selection
-        self.accumulation = accumulation
-
-        # getting the initial model
-        with torch.no_grad():
-            self.model.accumulated_gradients = []
-            tensors_to_cat = [
-                v.data.flatten() for _, v in self.model.state_dict().items()
-            ]
-            concated = torch.cat(tensors_to_cat, dim=0)
-            self.init_model = fft.rfft(concated)
-            self.prev = None
-            if self.accumulation:
-                if self.model.accumulated_changes is None:
-                    self.model.accumulated_changes = torch.zeros_like(self.init_model)
-                    self.prev = self.init_model
-                else:
-                    self.model.accumulated_changes += self.init_model - self.prev
-                    self.prev = self.init_model
 
     def apply_fft(self):
         """
@@ -129,20 +108,19 @@ class FFT(Sharing):
         """
 
         logging.info("Returning fft compressed model weights")
-        tensors_to_cat = [v.data.flatten() for _, v in self.model.state_dict().items()]
-        concated = torch.cat(tensors_to_cat, dim=0)
-        flat_fft = fft.rfft(concated)
-        if self.change_based_selection:
-
-            assert len(self.model.accumulated_gradients) == 1
-            diff = self.model.accumulated_gradients[0]
-            _, index = torch.topk(
-                diff.abs(), round(self.alpha * len(flat_fft)), dim=0, sorted=False
-            )
-        else:
-            _, index = torch.topk(
-                flat_fft.abs(), round(self.alpha * len(flat_fft)), dim=0, sorted=False
-            )
+        with torch.no_grad():
+            tensors_to_cat = [v.data.flatten() for _, v in self.model.state_dict().items()]
+            concated = torch.cat(tensors_to_cat, dim=0)
+            flat_fft = self.change_transformer(concated)
+            if self.change_based_selection:
+                diff = self.model.model_change
+                _, index = torch.topk(
+                    diff.abs(), round(self.alpha * len(diff)), dim=0, sorted=False
+                )
+            else:
+                _, index = torch.topk(
+                    flat_fft.abs(), round(self.alpha * len(flat_fft)), dim=0, sorted=False
+                )
 
         return flat_fft[index], index
 
@@ -199,7 +177,7 @@ class FFT(Sharing):
                 self.communication.encrypt(m["alpha"])
             )
 
-            return m
+        return m
 
     def deserialized_model(self, m):
         """
@@ -220,8 +198,6 @@ class FFT(Sharing):
             return super().deserialized_model(m)
 
         with torch.no_grad():
-            state_dict = self.model.state_dict()
-
             if not self.dict_ordered:
                 raise NotImplementedError
 
@@ -234,119 +210,47 @@ class FFT(Sharing):
             ret = dict()
             ret["indices"] = indices_tensor
             ret["params"] = params_tensor
-            return ret
+        return ret
 
-    def step(self):
+    def _averaging(self):
         """
-        Perform a sharing step. Implements D-PSGD.
+        Averages the received model with the local model
 
         """
-        t_start = time()
-        shapes = []
-        lens = []
-        end_model = None
-        change = 0
-        self.model.accumulated_gradients = []
         with torch.no_grad():
-            # FFT of this model
-            tensors_to_cat = []
-            for _, v in self.model.state_dict().items():
-                shapes.append(v.shape)
-                t = v.flatten()
-                lens.append(t.shape[0])
-                tensors_to_cat.append(t)
-            concated = torch.cat(tensors_to_cat, dim=0)
-            end_model = fft.rfft(concated)
-            change = end_model - self.init_model
-            if self.accumulation:
-                change += self.model.accumulated_changes
-            self.model.accumulated_gradients.append(change)
-        data = self.serialized_model()
-        t_post_serialize = time()
-        my_uid = self.mapping.get_uid(self.rank, self.machine_id)
-        all_neighbors = self.graph.neighbors(my_uid)
-        iter_neighbors = self.get_neighbors(all_neighbors)
-        data["degree"] = len(all_neighbors)
-        data["iteration"] = self.communication_round
-        for neighbor in iter_neighbors:
-            self.communication.send(neighbor, data)
-        t_post_send = time()
-        logging.info("Waiting for messages from neighbors")
-        while not self.received_from_all():
-            sender, data = self.communication.receive()
-            logging.debug("Received model from {}".format(sender))
-            degree = data["degree"]
-            iteration = data["iteration"]
-            del data["degree"]
-            del data["iteration"]
-            self.peer_deques[sender].append((degree, iteration, data))
-            logging.info(
-                "Deserialized received model from {} of iteration {}".format(
-                    sender, iteration
+            total = None
+            weight_total = 0
+
+            flat_fft = self.change_transformer(self.init_model)
+
+            for i, n in enumerate(self.peer_deques):
+                degree, iteration, data = self.peer_deques[n].popleft()
+                logging.debug(
+                    "Averaging model from neighbor {} of iteration {}".format(n, iteration)
                 )
-            )
-        t_post_recv = time()
+                data = self.deserialized_model(data)
+                params = data["params"]
+                indices = data["indices"]
+                # use local data to complement
+                topkf = flat_fft.clone().detach()
+                topkf[indices] = params
 
-        logging.info("Starting model averaging after receiving from all neighbors")
-        total = None
-        weight_total = 0
+                weight = 1 / (max(len(self.peer_deques), degree) + 1)  # Metro-Hastings
+                weight_total += weight
+                if total is None:
+                    total = weight * topkf
+                else:
+                    total += weight * topkf
 
-        flat_fft = end_model
+            # Metro-Hastings
+            total += (1 - weight_total) * flat_fft
+            reverse_total = fft.irfft(total)
 
-        for i, n in enumerate(self.peer_deques):
-            degree, iteration, data = self.peer_deques[n].popleft()
-            logging.debug(
-                "Averaging model from neighbor {} of iteration {}".format(n, iteration)
-            )
-            data = self.deserialized_model(data)
-            params = data["params"]
-            indices = data["indices"]
-            # use local data to complement
-            topkf = flat_fft.clone().detach()
-            topkf[indices] = params
-
-            weight = 1 / (max(len(self.peer_deques), degree) + 1)  # Metro-Hastings
-            weight_total += weight
-            if total is None:
-                total = weight * topkf
-            else:
-                total += weight * topkf
-
-        # Metro-Hastings
-        total += (1 - weight_total) * flat_fft
-        reverse_total = fft.irfft(total)
-
-        start_index = 0
-        std_dict = {}
-        for i, key in enumerate(self.model.state_dict()):
-            end_index = start_index + lens[i]
-            std_dict[key] = reverse_total[start_index:end_index].reshape(shapes[i])
-            start_index = end_index
+            start_index = 0
+            std_dict = {}
+            for i, key in enumerate(self.model.state_dict()):
+                end_index = start_index + self.lens[i]
+                std_dict[key] = reverse_total[start_index:end_index].reshape(self.shapes[i])
+                start_index = end_index
 
         self.model.load_state_dict(std_dict)
-
-        logging.info("Model averaging complete")
-
-        self.communication_round += 1
-
-        with torch.no_grad():
-            self.model.accumulated_gradients = []
-            tensors_to_cat = [
-                v.data.flatten() for _, v in self.model.state_dict().items()
-            ]
-            concated = torch.cat(tensors_to_cat, dim=0)
-            self.init_model = fft.rfft(concated)
-            if self.accumulation:
-                self.model.accumulated_changes += self.init_model - self.prev
-                self.prev = self.init_model
-
-        t_end = time()
-
-        logging.info(
-            "Sharing::step | Serialize: %f; Send: %f; Recv: %f; Averaging: %f; Total: %f",
-            t_post_serialize - t_start,
-            t_post_send - t_post_serialize,
-            t_post_recv - t_post_send,
-            t_end - t_post_recv,
-            t_end - t_start,
-        )
