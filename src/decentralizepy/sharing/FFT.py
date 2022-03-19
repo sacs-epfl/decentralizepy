@@ -51,6 +51,7 @@ class FFT(PartialModel):
         change_based_selection=True,
         save_accumulated="",
         accumulation=True,
+        accumulate_averaging_changes=False
     ):
         """
         Constructor
@@ -88,10 +89,13 @@ class FFT(PartialModel):
             the accumulated change is stored.
         accumulation : bool
             True if the the indices to share should be selected based on accumulated frequency change
+        accumulate_averaging_changes: bool
+            True if the accumulation should account the model change due to averaging
+
         """
         super().__init__(
             rank, machine_id, communication, mapping, graph, model, dataset, log_dir, alpha, dict_ordered, save_shared,
-            metadata_cap, accumulation, save_accumulated, change_transformer_fft
+            metadata_cap, accumulation, save_accumulated, change_transformer_fft, accumulate_averaging_changes
         )
         self.change_based_selection = change_based_selection
 

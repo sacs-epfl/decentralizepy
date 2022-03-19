@@ -58,6 +58,7 @@ class Wavelet(PartialModel):
         change_based_selection=True,
         save_accumulated="",
         accumulation=False,
+        accumulate_averaging_changes = False
     ):
         """
         Constructor
@@ -99,13 +100,16 @@ class Wavelet(PartialModel):
             the accumulated change is stored.
         accumulation : bool
             True if the the indices to share should be selected based on accumulated frequency change
+        accumulate_averaging_changes: bool
+            True if the accumulation should account the model change due to averaging
         """
         self.wavelet = wavelet
         self.level = level
 
         super().__init__(
             rank, machine_id, communication, mapping, graph, model, dataset, log_dir, alpha, dict_ordered, save_shared,
-            metadata_cap, accumulation, save_accumulated, lambda x : change_transformer_wavelet(x, wavelet, level)
+            metadata_cap, accumulation, save_accumulated, lambda x : change_transformer_wavelet(x, wavelet, level),
+            accumulate_averaging_changes
         )
 
         self.change_based_selection = change_based_selection
