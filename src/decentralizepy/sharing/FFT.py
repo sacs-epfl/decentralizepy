@@ -27,6 +27,7 @@ def change_transformer_fft(x):
     """
     return fft.rfft(x)
 
+
 class FFT(PartialModel):
     """
     This class implements the fft version of model sharing
@@ -51,7 +52,7 @@ class FFT(PartialModel):
         change_based_selection=True,
         save_accumulated="",
         accumulation=True,
-        accumulate_averaging_changes=False
+        accumulate_averaging_changes=False,
     ):
         """
         Constructor
@@ -94,8 +95,22 @@ class FFT(PartialModel):
 
         """
         super().__init__(
-            rank, machine_id, communication, mapping, graph, model, dataset, log_dir, alpha, dict_ordered, save_shared,
-            metadata_cap, accumulation, save_accumulated, change_transformer_fft, accumulate_averaging_changes
+            rank,
+            machine_id,
+            communication,
+            mapping,
+            graph,
+            model,
+            dataset,
+            log_dir,
+            alpha,
+            dict_ordered,
+            save_shared,
+            metadata_cap,
+            accumulation,
+            save_accumulated,
+            change_transformer_fft,
+            accumulate_averaging_changes,
         )
         self.change_based_selection = change_based_selection
 
@@ -113,7 +128,9 @@ class FFT(PartialModel):
 
         logging.info("Returning fft compressed model weights")
         with torch.no_grad():
-            tensors_to_cat = [v.data.flatten() for _, v in self.model.state_dict().items()]
+            tensors_to_cat = [
+                v.data.flatten() for _, v in self.model.state_dict().items()
+            ]
             concated = torch.cat(tensors_to_cat, dim=0)
             flat_fft = self.change_transformer(concated)
             if self.change_based_selection:
@@ -123,7 +140,10 @@ class FFT(PartialModel):
                 )
             else:
                 _, index = torch.topk(
-                    flat_fft.abs(), round(self.alpha * len(flat_fft)), dim=0, sorted=False
+                    flat_fft.abs(),
+                    round(self.alpha * len(flat_fft)),
+                    dim=0,
+                    sorted=False,
                 )
 
         return flat_fft[index], index
@@ -233,7 +253,9 @@ class FFT(PartialModel):
             for i, n in enumerate(self.peer_deques):
                 degree, iteration, data = self.peer_deques[n].popleft()
                 logging.debug(
-                    "Averaging model from neighbor {} of iteration {}".format(n, iteration)
+                    "Averaging model from neighbor {} of iteration {}".format(
+                        n, iteration
+                    )
                 )
                 data = self.deserialized_model(data)
                 params = data["params"]
@@ -257,7 +279,9 @@ class FFT(PartialModel):
             std_dict = {}
             for i, key in enumerate(self.model.state_dict()):
                 end_index = start_index + self.lens[i]
-                std_dict[key] = reverse_total[start_index:end_index].reshape(self.shapes[i])
+                std_dict[key] = reverse_total[start_index:end_index].reshape(
+                    self.shapes[i]
+                )
                 start_index = end_index
 
         self.model.load_state_dict(std_dict)

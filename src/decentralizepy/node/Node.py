@@ -481,4 +481,3 @@ class Node:
         )
 
         self.run()
-        logging.info("Node finished running")

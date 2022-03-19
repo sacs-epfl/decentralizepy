@@ -10,27 +10,29 @@ import torch
 
 from decentralizepy.sharing.PartialModel import PartialModel
 
+
 def change_transformer_wavelet(x, wavelet, level):
-        """
-        Transforms the model changes into wavelet frequency domain
+    """
+    Transforms the model changes into wavelet frequency domain
 
-        Parameters
-        ----------
-        x : torch.Tensor
-            Model change in the space domain
-        wavelet : str
-            name of the wavelet to be used in gradient compression
-        level: int
-            name of the wavelet to be used in gradient compression
+    Parameters
+    ----------
+    x : torch.Tensor
+        Model change in the space domain
+    wavelet : str
+        name of the wavelet to be used in gradient compression
+    level: int
+        name of the wavelet to be used in gradient compression
 
-        Returns
-        -------
-        x : torch.Tensor
-            Representation of the change int the wavelet domain
-        """
-        coeff = pywt.wavedec(x, wavelet, level=level)
-        data, coeff_slices = pywt.coeffs_to_array(coeff)
-        return torch.from_numpy(data.ravel())
+    Returns
+    -------
+    x : torch.Tensor
+        Representation of the change int the wavelet domain
+    """
+    coeff = pywt.wavedec(x, wavelet, level=level)
+    data, coeff_slices = pywt.coeffs_to_array(coeff)
+    return torch.from_numpy(data.ravel())
+
 
 class Wavelet(PartialModel):
     """
@@ -58,7 +60,7 @@ class Wavelet(PartialModel):
         change_based_selection=True,
         save_accumulated="",
         accumulation=False,
-        accumulate_averaging_changes = False
+        accumulate_averaging_changes=False,
     ):
         """
         Constructor
@@ -107,9 +109,22 @@ class Wavelet(PartialModel):
         self.level = level
 
         super().__init__(
-            rank, machine_id, communication, mapping, graph, model, dataset, log_dir, alpha, dict_ordered, save_shared,
-            metadata_cap, accumulation, save_accumulated, lambda x : change_transformer_wavelet(x, wavelet, level),
-            accumulate_averaging_changes
+            rank,
+            machine_id,
+            communication,
+            mapping,
+            graph,
+            model,
+            dataset,
+            log_dir,
+            alpha,
+            dict_ordered,
+            save_shared,
+            metadata_cap,
+            accumulation,
+            save_accumulated,
+            lambda x: change_transformer_wavelet(x, wavelet, level),
+            accumulate_averaging_changes,
         )
 
         self.change_based_selection = change_based_selection
@@ -132,13 +147,11 @@ class Wavelet(PartialModel):
 
         """
 
-        logging.info("Returning dwt compressed model weights")
+        logging.info("Returning wavelet compressed model weights")
         tensors_to_cat = [v.data.flatten() for _, v in self.model.state_dict().items()]
         concated = torch.cat(tensors_to_cat, dim=0)
         data = self.change_transformer(concated)
-        logging.info("produced wavelet representation of current model")
         if self.change_based_selection:
-            logging.info("changed based selection")
             diff = self.model.model_change
             _, index = torch.topk(
                 diff.abs(),
@@ -146,7 +159,6 @@ class Wavelet(PartialModel):
                 dim=0,
                 sorted=False,
             )
-            logging.info("finished change based selection")
         else:
             _, index = torch.topk(
                 data.abs(),
@@ -167,7 +179,6 @@ class Wavelet(PartialModel):
             Model converted to json dict
 
         """
-        logging.info("serializing wavelet model")
         if self.alpha > self.metadata_cap:  # Share fully
             return super().serialized_model()
 
@@ -175,7 +186,6 @@ class Wavelet(PartialModel):
             topk, indices = self.apply_wavelet()
 
             self.model.rewind_accumulation(indices)
-            logging.info("finished rewind")
             if self.save_shared:
                 shared_params = dict()
                 shared_params["order"] = list(self.model.state_dict().keys())
@@ -230,7 +240,6 @@ class Wavelet(PartialModel):
             state_dict of received
 
         """
-        logging.info("deserializing wavelet model")
         if self.alpha > self.metadata_cap:  # Share fully
             return super().deserialized_model(m)
 
@@ -265,7 +274,9 @@ class Wavelet(PartialModel):
             for i, n in enumerate(self.peer_deques):
                 degree, iteration, data = self.peer_deques[n].popleft()
                 logging.debug(
-                    "Averaging model from neighbor {} of iteration {}".format(n, iteration)
+                    "Averaging model from neighbor {} of iteration {}".format(
+                        n, iteration
+                    )
                 )
                 data = self.deserialized_model(data)
                 params = data["params"]
@@ -296,8 +307,9 @@ class Wavelet(PartialModel):
             std_dict = {}
             for i, key in enumerate(self.model.state_dict()):
                 end_index = start_index + self.lens[i]
-                std_dict[key] = reverse_total[start_index:end_index].reshape(self.shapes[i])
+                std_dict[key] = reverse_total[start_index:end_index].reshape(
+                    self.shapes[i]
+                )
                 start_index = end_index
 
         self.model.load_state_dict(std_dict)
-

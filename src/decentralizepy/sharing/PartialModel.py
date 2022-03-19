@@ -30,10 +30,10 @@ class PartialModel(Sharing):
         dict_ordered=True,
         save_shared=False,
         metadata_cap=1.0,
-        accumulation = False,
+        accumulation=False,
         save_accumulated="",
-        change_transformer = identity,
-        accumulate_averaging_changes = False
+        change_transformer=identity,
+        accumulate_averaging_changes=False,
     ):
         """
         Constructor
@@ -100,9 +100,11 @@ class PartialModel(Sharing):
                 tensors_to_cat.append(t)
             self.init_model = torch.cat(tensors_to_cat, dim=0)
             if self.accumulation:
-                self.model.accumulated_changes = torch.zeros_like(self.change_transformer(self.init_model))
+                self.model.accumulated_changes = torch.zeros_like(
+                    self.change_transformer(self.init_model)
+                )
                 self.prev = self.init_model
-                
+
         if self.save_accumulated:
             self.model_change_path = os.path.join(
                 self.log_dir, "model_change/{}".format(self.rank)
@@ -295,7 +297,9 @@ class PartialModel(Sharing):
             self.init_model = post_share_model
             if self.accumulation:
                 if self.accumulate_averaging_changes:
-                    self.model.accumulated_changes += self.change_transformer(self.init_model - self.prev)
+                    self.model.accumulated_changes += self.change_transformer(
+                        self.init_model - self.prev
+                    )
                 self.prev = self.init_model
             self.model.model_change = None
         if self.save_accumulated:
