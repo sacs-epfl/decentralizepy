@@ -379,7 +379,7 @@ class Node:
             
             rounds_to_train_evaluate -= 1
 
-            if rounds_to_test == 0:
+            if rounds_to_train_evaluate == 0:
                 logging.info("Evaluating on train set.")
                 rounds_to_train_evaluate = self.train_evaluate_after
                 loss_after_sharing = self.trainer.eval_loss(self.dataset)
