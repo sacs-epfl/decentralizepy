@@ -10,6 +10,7 @@ config_file=~/tmp/config.ini
 procs_per_machine=16
 machines=6
 iterations=5
+train_evaluate_after=5
 test_after=21 # we do not test
 eval_file=testing.py
 log_level=INFO
@@ -32,7 +33,7 @@ do
   mkdir -p $log_dir
   cp $i $config_file
   $python_bin/crudini --set $config_file COMMUNICATION addresses_filepath $ip_machines
-  $env_python $eval_file -ro 0 -ld $log_dir -mid $m -ps $procs_per_machine -ms $machines -is $iterations -gf $graph -ta $test_after -cf $config_file -ll $log_level
+  $env_python $eval_file -ro 0 -tea $train_evaluate_after -ld $log_dir -mid $m -ps $procs_per_machine -ms $machines -is $iterations -gf $graph -ta $test_after -cf $config_file -ll $log_level
   echo $i is done
   sleep 3
   echo end of sleep

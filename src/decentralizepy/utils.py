@@ -75,6 +75,7 @@ def get_args():
     parser.add_argument("-gf", "--graph_file", type=str, default="36_nodes.edges")
     parser.add_argument("-gt", "--graph_type", type=str, default="edges")
     parser.add_argument("-ta", "--test_after", type=int, default=5)
+    parser.add_argument("-tea", "--train_evaluate_after", type=int, default=1)
     parser.add_argument("-ro", "--reset_optimizer", type=int, default=1)
 
     args = parser.parse_args()
