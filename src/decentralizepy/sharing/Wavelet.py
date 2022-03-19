@@ -257,7 +257,11 @@ class Wavelet(PartialModel):
         with torch.no_grad():
             total = None
             weight_total = 0
-            wt_params = self.change_transformer(self.init_model)
+            tensors_to_cat = [
+                v.data.flatten() for _, v in self.model.state_dict().items()
+            ]
+            pre_share_model = torch.cat(tensors_to_cat, dim=0)
+            wt_params = self.change_transformer(pre_share_model)
             for i, n in enumerate(self.peer_deques):
                 degree, iteration, data = self.peer_deques[n].popleft()
                 logging.debug(

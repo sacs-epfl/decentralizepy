@@ -155,7 +155,7 @@ class PartialModel(Sharing):
             Model converted to a dict
 
         """
-        if self.alpha > self.metadata_cap:  # Share fully
+        if self.alpha >= self.metadata_cap:  # Share fully
             return super().serialized_model()
 
         with torch.no_grad():
