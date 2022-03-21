@@ -102,3 +102,31 @@ class DataPartitioner(object):
 
         """
         return Partition(self.data, self.partitions[rank])
+
+class SimpleDataPartitioner(DataPartitioner):
+    """
+    Class to partition the dataset
+
+    """
+
+    def __init__(self, data, sizes=[1.0]):
+        """
+        Constructor. Partitions the data according the parameters
+
+        Parameters
+        ----------
+        data : indexable
+            An indexable list of data items
+        sizes : list(float)
+            A list of fractions for each process
+
+        """
+        self.data = data
+        self.partitions = []
+        data_len = len(data)
+        indexes = [x for x in range(0, data_len)]
+
+        for frac in sizes:
+            part_len = int(frac * data_len)
+            self.partitions.append(indexes[0:part_len])
+            indexes = indexes[part_len:]
