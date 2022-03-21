@@ -14,9 +14,10 @@ class Model(nn.Module):
 
         """
         super().__init__()
-        self.accumulated_gradients = []
+        self.model_change = None
         self._param_count_ot = None
         self._param_count_total = None
+        self.accumulated_changes = None
 
     def count_params(self, only_trainable=False):
         """
@@ -43,3 +44,16 @@ class Model(nn.Module):
             if not self._param_count_total:
                 self._param_count_total = sum(p.numel() for p in self.parameters())
             return self._param_count_total
+
+    def rewind_accumulation(self, indices):
+        """
+        resets accumulated_changes at the given indices
+
+        Parameters
+        ----------
+        indices : torch.Tensor
+            Tensor that contains indices corresponding to the flatten model
+
+        """
+        if self.accumulated_changes is not None:
+            self.accumulated_changes[indices] = 0.0

@@ -77,6 +77,7 @@ class Node:
         iterations,
         log_dir,
         test_after,
+        train_evaluate_after,
         reset_optimizer,
     ):
         """
@@ -92,8 +93,14 @@ class Node:
             The object containing the mapping rank <--> uid
         graph : decentralizepy.graphs
             The object containing the global graph
+        iterations : int
+            Number of iterations (communication steps) for which the model should be trained
         log_dir : str
             Logging directory
+        test_after : int
+            Number of iterations after which the test loss and accuracy arecalculated
+        train_evaluate_after : int
+            Number of iterations after which the train loss is calculated
         reset_optimizer : int
             1 if optimizer should be reset every communication round, else 0
 
@@ -106,6 +113,7 @@ class Node:
         self.log_dir = log_dir
         self.iterations = iterations
         self.test_after = test_after
+        self.train_evaluate_after = train_evaluate_after
         self.reset_optimizer = reset_optimizer
 
         logging.debug("Rank: %d", self.rank)
@@ -260,6 +268,7 @@ class Node:
         log_dir=".",
         log_level=logging.INFO,
         test_after=5,
+        train_evaluate_after = 1,
         reset_optimizer=1,
         *args
     ):
@@ -278,10 +287,16 @@ class Node:
             The object containing the global graph
         config : dict
             A dictionary of configurations.
+        iterations : int
+            Number of iterations (communication steps) for which the model should be trained
         log_dir : str
             Logging directory
         log_level : logging.Level
             One of DEBUG, INFO, WARNING, ERROR, CRITICAL
+        test_after : int
+            Number of iterations after which the test loss and accuracy arecalculated
+        train_evaluate_after : int
+            Number of iterations after which the train loss is calculated
         reset_optimizer : int
             1 if optimizer should be reset every communication round, else 0
         args : optional
@@ -298,6 +313,7 @@ class Node:
             iterations,
             log_dir,
             test_after,
+            train_evaluate_after,
             reset_optimizer,
         )
         self.init_log(log_dir, rank, log_level)
@@ -315,6 +331,7 @@ class Node:
         self.testset = self.dataset.get_testset()
         self.communication.connect_neighbors(self.graph.neighbors(self.uid))
         rounds_to_test = self.test_after
+        rounds_to_train_evaluate = self.train_evaluate_after
 
         for iteration in range(self.iterations):
             logging.info("Starting training iteration: %d", iteration)
@@ -328,7 +345,6 @@ class Node:
                 )  # Reset optimizer state
                 self.trainer.reset_optimizer(self.optimizer)
 
-            loss_after_sharing = self.trainer.eval_loss(self.dataset)
 
             if iteration:
                 with open(
@@ -348,7 +364,6 @@ class Node:
                     "grad_std": {},
                 }
 
-            results_dict["train_loss"][iteration + 1] = loss_after_sharing
             results_dict["total_bytes"][iteration + 1] = self.communication.total_bytes
 
             if hasattr(self.sharing, "total_meta"):
@@ -361,14 +376,21 @@ class Node:
                 results_dict["grad_mean"][iteration + 1] = self.sharing.mean
             if hasattr(self.sharing, "std"):
                 results_dict["grad_std"][iteration + 1] = self.sharing.std
+            
+            rounds_to_train_evaluate -= 1
 
-            self.save_plot(
-                results_dict["train_loss"],
-                "train_loss",
-                "Training Loss",
-                "Communication Rounds",
-                os.path.join(self.log_dir, "{}_train_loss.png".format(self.rank)),
-            )
+            if rounds_to_train_evaluate == 0:
+                logging.info("Evaluating on train set.")
+                rounds_to_train_evaluate = self.train_evaluate_after
+                loss_after_sharing = self.trainer.eval_loss(self.dataset)
+                results_dict["train_loss"][iteration + 1] = loss_after_sharing
+                self.save_plot(
+                    results_dict["train_loss"],
+                    "train_loss",
+                    "Training Loss",
+                    "Communication Rounds",
+                    os.path.join(self.log_dir, "{}_train_loss.png".format(self.rank)),
+                )
 
             rounds_to_test -= 1
 
@@ -413,6 +435,7 @@ class Node:
         log_dir=".",
         log_level=logging.INFO,
         test_after=5,
+        train_evaluate_after=1,
         reset_optimizer=1,
         *args
     ):
@@ -443,10 +466,16 @@ class Node:
                 training_class = Training
                 epochs_per_round = 25
                 batch_size = 64
+        iterations : int
+            Number of iterations (communication steps) for which the model should be trained
         log_dir : str
             Logging directory
         log_level : logging.Level
             One of DEBUG, INFO, WARNING, ERROR, CRITICAL
+        test_after : int
+            Number of iterations after which the test loss and accuracy arecalculated
+        train_evaluate_after : int
+            Number of iterations after which the train loss is calculated
         reset_optimizer : int
             1 if optimizer should be reset every communication round, else 0
         args : optional
@@ -467,6 +496,7 @@ class Node:
             log_dir,
             log_level,
             test_after,
+            train_evaluate_after,
             reset_optimizer,
             *args
         )

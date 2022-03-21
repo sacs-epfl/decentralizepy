@@ -46,7 +46,7 @@ class Training:
             Directory to log the model change.
         rounds : int, optional
             Number of steps/epochs per training call
-        full_epochs: bool, optional
+        full_epochs : bool, optional
             True if 1 round = 1 epoch. False if 1 round = 1 minibatch
         batch_size : int, optional
             Number of items to learn over, in one batch

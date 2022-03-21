@@ -3,6 +3,7 @@ import os
 import sys
 
 import numpy as np
+import pandas as pd
 from matplotlib import pyplot as plt
 
 
@@ -61,14 +62,50 @@ def plot_results(path):
         plt.figure(1)
         means, stdevs, mins, maxs = get_stats([x["train_loss"] for x in results])
         plot(means, stdevs, mins, maxs, "Training Loss", folder, "upper right")
+        df = pd.DataFrame(
+            {
+                "mean": list(means.values()),
+                "std": list(stdevs.values()),
+                "nr_nodes": [len(results)] * len(means),
+            },
+            list(means.keys()),
+            columns=["mean", "std", "nr_nodes"],
+        )
+        df.to_csv(
+            os.path.join(path, "train_loss_" + folder + ".csv"), index_label="rounds"
+        )
         # Plot Testing loss
         plt.figure(2)
         means, stdevs, mins, maxs = get_stats([x["test_loss"] for x in results])
         plot(means, stdevs, mins, maxs, "Testing Loss", folder, "upper right")
+        df = pd.DataFrame(
+            {
+                "mean": list(means.values()),
+                "std": list(stdevs.values()),
+                "nr_nodes": [len(results)] * len(means),
+            },
+            list(means.keys()),
+            columns=["mean", "std", "nr_nodes"],
+        )
+        df.to_csv(
+            os.path.join(path, "test_loss_" + folder + ".csv"), index_label="rounds"
+        )
         # Plot Testing Accuracy
         plt.figure(3)
         means, stdevs, mins, maxs = get_stats([x["test_acc"] for x in results])
         plot(means, stdevs, mins, maxs, "Testing Accuracy", folder, "lower right")
+        df = pd.DataFrame(
+            {
+                "mean": list(means.values()),
+                "std": list(stdevs.values()),
+                "nr_nodes": [len(results)] * len(means),
+            },
+            list(means.keys()),
+            columns=["mean", "std", "nr_nodes"],
+        )
+        df.to_csv(
+            os.path.join(path, "test_acc_" + folder + ".csv"), index_label="rounds"
+        )
         plt.figure(6)
         means, stdevs, mins, maxs = get_stats([x["grad_std"] for x in results])
         plot(
