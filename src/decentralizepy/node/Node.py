@@ -268,7 +268,7 @@ class Node:
         log_dir=".",
         log_level=logging.INFO,
         test_after=5,
-        train_evaluate_after = 1,
+        train_evaluate_after=1,
         reset_optimizer=1,
         *args
     ):
@@ -345,7 +345,6 @@ class Node:
                 )  # Reset optimizer state
                 self.trainer.reset_optimizer(self.optimizer)
 
-
             if iteration:
                 with open(
                     os.path.join(self.log_dir, "{}_results.json".format(self.rank)),
@@ -376,7 +375,7 @@ class Node:
                 results_dict["grad_mean"][iteration + 1] = self.sharing.mean
             if hasattr(self.sharing, "std"):
                 results_dict["grad_std"][iteration + 1] = self.sharing.std
-            
+
             rounds_to_train_evaluate -= 1
 
             if rounds_to_train_evaluate == 0:

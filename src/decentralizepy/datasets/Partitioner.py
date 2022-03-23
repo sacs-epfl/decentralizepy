@@ -103,6 +103,7 @@ class DataPartitioner(object):
         """
         return Partition(self.data, self.partitions[rank])
 
+
 class SimpleDataPartitioner(DataPartitioner):
     """
     Class to partition the dataset
