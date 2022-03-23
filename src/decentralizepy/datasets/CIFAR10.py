@@ -3,9 +3,9 @@ import os
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 import torchvision
 import torchvision.transforms as transforms
-import torch.nn.functional as F
 from torch import nn
 from torch.utils.data import DataLoader
 
@@ -16,6 +16,7 @@ from decentralizepy.mappings.Mapping import Mapping
 from decentralizepy.models.Model import Model
 
 NUM_CLASSES = 10
+
 
 class CIFAR10(Dataset):
     """
@@ -29,10 +30,10 @@ class CIFAR10(Dataset):
 
         """
         logging.info("Loading training set.")
-        trainset = torchvision.datasets.CIFAR10(root=self.train_dir, train=True,
-                                        download=True, transform=self.transform)
+        trainset = torchvision.datasets.CIFAR10(
+            root=self.train_dir, train=True, download=True, transform=self.transform
+        )
         c_len = len(trainset)
-
 
         if self.sizes == None:  # Equal distribution of data among processes
             e = c_len // self.n_procs
@@ -45,14 +46,16 @@ class CIFAR10(Dataset):
 
         if not self.partition_niid:
             self.trainset = DataPartitioner(trainset, self.sizes).use(self.uid)
-        else:        
+        else:
             train_data = {key: [] for key in range(10)}
             for x, y in trainset:
                 train_data[y].append(x)
             all_trainset = []
             for y, x in train_data.items():
                 all_trainset.extend([(a, y) for a in x])
-            self.trainset = SimpleDataPartitioner(all_trainset, self.sizes).use(self.uid)
+            self.trainset = SimpleDataPartitioner(all_trainset, self.sizes).use(
+                self.uid
+            )
 
     def load_testset(self):
         """
@@ -60,10 +63,10 @@ class CIFAR10(Dataset):
 
         """
         logging.info("Loading testing set.")
-        
-        self.testset = torchvision.datasets.CIFAR10(root=self.test_dir, train=False,
-                                       download=True, transform=self.transform)
-        
+
+        self.testset = torchvision.datasets.CIFAR10(
+            root=self.test_dir, train=False, download=True, transform=self.transform
+        )
 
     def __init__(
         self,
@@ -75,7 +78,7 @@ class CIFAR10(Dataset):
         test_dir="",
         sizes="",
         test_batch_size=1024,
-        partition_niid=False
+        partition_niid=False,
     ):
         """
         Constructor which reads the data files, instantiates and partitions the dataset
@@ -115,8 +118,11 @@ class CIFAR10(Dataset):
 
         self.partition_niid = partition_niid
         self.transform = transforms.Compose(
-            [transforms.ToTensor(),
-             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+            [
+                transforms.ToTensor(),
+                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+            ]
+        )
 
         if self.__training__:
             self.load_trainset()
@@ -146,9 +152,7 @@ class CIFAR10(Dataset):
 
         """
         if self.__training__:
-            return DataLoader(
-                self.trainset, batch_size=batch_size, shuffle=shuffle
-            )
+            return DataLoader(self.trainset, batch_size=batch_size, shuffle=shuffle)
         raise RuntimeError("Training set not initialized!")
 
     def get_testset(self):
@@ -166,9 +170,7 @@ class CIFAR10(Dataset):
 
         """
         if self.__testing__:
-            return DataLoader(
-                self.testset , batch_size=self.test_batch_size
-            )
+            return DataLoader(self.testset, batch_size=self.test_batch_size)
         raise RuntimeError("Test set not initialized!")
 
     def test(self, model, loss):
@@ -227,6 +229,7 @@ class CIFAR10(Dataset):
         loss_val = loss_val / count
         logging.info("Overall accuracy is: {:.1f} %".format(accuracy))
         return accuracy, loss_val
+
 
 class CNN(Model):
     """
