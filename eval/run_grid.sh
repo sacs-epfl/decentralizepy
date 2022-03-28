@@ -41,7 +41,7 @@ cd $decpy_path
 env_python=$python_bin/python3
 graph=192_regular.edges
 config_file=~/tmp/config.ini
-procs_per_machine=32
+procs_per_machine=16
 machines=6
 global_epochs=25
 eval_file=testing.py
@@ -59,7 +59,7 @@ lrs=( "0.001" "0.0001" "0.0001")
 # Batch sizes to test
 batchsize=("8" "16")
 # The number of communication rounds per global epoch to test
-comm_rounds_per_global_epoch=("1" "10" "100")
+comm_rounds_per_global_epoch=("1" "5" "10")
 procs=`expr $procs_per_machine \* $machines`
 echo procs: $procs
 # Celeba has 63741 samples
@@ -83,7 +83,7 @@ do
     # calculating the number of batches each user/proc uses per communication step (The actual number may be a float, which we round down)
     batches_per_comm_round=$($env_python -c "from math import floor; x = floor($batches_per_epoch / $r); print(1 if x==0 else x)")
     # since the batches per communication round were rounded down we need to change the number of iterations to reflect that
-    new_iterations=$($env_python -c "from math import floor; x = floor($batches_per_epoch / $r); y = floor((($batches_per_epoch / $r) - x +1)*$iterations); print($iterations if x==0 else y)")
+    new_iterations=$($env_python -c "from math import floor; tmp = floor($batches_per_epoch / $r); x = 1 if tmp == 0 else tmp; y = floor((($batches_per_epoch / $r)/x)*$iterations); print($iterations if y<$iterations else y)")
     echo batches per communication round: $batches_per_comm_round
     echo corrected iterations: $new_iterations
     for lr in "${lrs[@]}"
