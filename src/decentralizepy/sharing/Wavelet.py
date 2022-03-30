@@ -184,7 +184,7 @@ class Wavelet(PartialModel):
 
         with torch.no_grad():
             topk, indices = self.apply_wavelet()
-
+            self.model.shared_parameters_counter[indices] += 1
             self.model.rewind_accumulation(indices)
             if self.save_shared:
                 shared_params = dict()

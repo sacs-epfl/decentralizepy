@@ -5,6 +5,7 @@ import sys
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+import torch
 
 
 def get_stats(l):
@@ -152,15 +153,15 @@ def plot_results(path):
         data_stdevs[folder] = list(stdevs.values())[0]
 
     plt.figure(1)
-    plt.savefig(os.path.join(path, "train_loss.png"))
+    plt.savefig(os.path.join(path, "train_loss.png"), dpi=300)
     plt.figure(2)
-    plt.savefig(os.path.join(path, "test_loss.png"))
+    plt.savefig(os.path.join(path, "test_loss.png"), dpi=300)
     plt.figure(3)
-    plt.savefig(os.path.join(path, "test_acc.png"))
+    plt.savefig(os.path.join(path, "test_acc.png"), dpi=300)
     plt.figure(6)
-    plt.savefig(os.path.join(path, "grad_std.png"))
+    plt.savefig(os.path.join(path, "grad_std.png"), dpi=300)
     plt.figure(7)
-    plt.savefig(os.path.join(path, "grad_mean.png"))
+    plt.savefig(os.path.join(path, "grad_mean.png"), dpi=300)
     # Plot total_bytes
     plt.figure(4)
     plt.title("Data Shared")
@@ -174,7 +175,7 @@ def plot_results(path):
     plt.ylabel("Total data shared in MBs")
     plt.xlabel("Fraction of Model Shared")
     plt.xticks(x_pos, list(bytes_means.keys()))
-    plt.savefig(os.path.join(path, "data_shared.png"))
+    plt.savefig(os.path.join(path, "data_shared.png"), dpi=300)
 
     # Plot stacked_bytes
     plt.figure(5)
@@ -198,7 +199,7 @@ def plot_results(path):
     plt.ylabel("Data shared in MBs")
     plt.xlabel("Fraction of Model Shared")
     plt.xticks(x_pos, list(meta_means.keys()))
-    plt.savefig(os.path.join(path, "parameters_metadata.png"))
+    plt.savefig(os.path.join(path, "parameters_metadata.png"), dpi=300)
 
 
 def plot_parameters(path):

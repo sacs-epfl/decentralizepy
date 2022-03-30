@@ -126,6 +126,8 @@ class PartialModel(Sharing):
             )
             Path(self.folder_path).mkdir(parents=True, exist_ok=True)
 
+        self.model.shared_parameters_counter = torch.zeros(self.change_transformer(self.init_model).shape[0], dtype = torch.int32)
+
     def extract_top_gradients(self):
         """
         Extract the indices and values of the topK gradients.
@@ -162,6 +164,7 @@ class PartialModel(Sharing):
 
         with torch.no_grad():
             _, G_topk = self.extract_top_gradients()
+            self.model.shared_parameters_counter[G_topk] += 1
             if self.accumulation:
                 self.model.rewind_accumulation(G_topk)
             if self.save_shared:

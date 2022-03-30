@@ -128,7 +128,7 @@ class TopKParams(Sharing):
 
         with torch.no_grad():
             values, index, offsets = self.extract_top_params()
-
+            self.model.shared_parameters_counter[index] += 1
             if self.save_shared:
                 shared_params = dict()
                 shared_params["order"] = list(self.model.state_dict().keys())
