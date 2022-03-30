@@ -18,6 +18,7 @@ class Model(nn.Module):
         self._param_count_ot = None
         self._param_count_total = None
         self.accumulated_changes = None
+        self.shared_parameters_counter = None
 
     def count_params(self, only_trainable=False):
         """

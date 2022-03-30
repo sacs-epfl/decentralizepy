@@ -84,6 +84,7 @@ class RoundRobinPartial(Sharing):
             block_end = min(T.shape[0], (self.current_block + 1) * self.block_size)
             self.current_block = (self.current_block + 1) % self.num_blocks
             T_send = T[block_start:block_end]
+            self.model.shared_parameters_counter[block_start:block_end] += 1
             logging.info("Range sending: {}-{}".format(block_start, block_end))
             logging.info("Generating dictionary to send")
 

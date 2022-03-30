@@ -131,6 +131,7 @@ class SubSampling(Sharing):
                 <= self.alpha
             )
             subsample = concated[binary_mask]
+            self.model.shared_parameters_counter[binary_mask] += 1
             # logging.debug("Subsampling vector is of size: " + str(subsample.size(dim = 0)))
             return (subsample, curr_seed, self.alpha)
         else:
@@ -147,6 +148,7 @@ class SubSampling(Sharing):
                     )
                     <= self.alpha
                 )
+                # TODO: support shared_parameters_counter
                 selected = flat[binary_mask]
                 values_list.append(selected)
                 off += selected.size(dim=0)

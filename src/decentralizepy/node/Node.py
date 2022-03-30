@@ -419,7 +419,12 @@ class Node:
                 os.path.join(self.log_dir, "{}_results.json".format(self.rank)), "w"
             ) as of:
                 json.dump(results_dict, of)
-
+        if self.model.shared_parameters_counter is not None:
+            logging.info("Saving the shared parameter counts")
+            with open(
+                    os.path.join(self.log_dir, "{}_shared_parameters.json".format(self.rank)), "w"
+            ) as of:
+                json.dump(self.model.shared_parameters_counter.numpy().tolist(), of)
         self.communication.disconnect_neighbors()
         logging.info("All neighbors disconnected. Process complete!")
 
