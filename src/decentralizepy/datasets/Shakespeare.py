@@ -8,7 +8,6 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import nn
-from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
 from decentralizepy.datasets.Data import Data

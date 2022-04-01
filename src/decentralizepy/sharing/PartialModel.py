@@ -126,7 +126,9 @@ class PartialModel(Sharing):
             )
             Path(self.folder_path).mkdir(parents=True, exist_ok=True)
 
-        self.model.shared_parameters_counter = torch.zeros(self.change_transformer(self.init_model).shape[0], dtype = torch.int32)
+        self.model.shared_parameters_counter = torch.zeros(
+            self.change_transformer(self.init_model).shape[0], dtype=torch.int32
+        )
 
     def extract_top_gradients(self):
         """

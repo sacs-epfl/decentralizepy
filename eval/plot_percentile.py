@@ -4,8 +4,8 @@ import sys
 
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
 import torch
+from matplotlib import pyplot as plt
 
 
 def get_stats(l):
@@ -70,7 +70,7 @@ def plot_results(path):
             for sp in shared_params:
                 filepath = os.path.join(mf_path, sp)
                 with open(filepath, "r") as spf:
-                    all_shared_params.append(np.array(json.load(spf), dtype = np.int32))
+                    all_shared_params.append(np.array(json.load(spf), dtype=np.int32))
 
         # Plot Training loss
         plt.figure(1)
@@ -78,19 +78,19 @@ def plot_results(path):
         mean = np.mean(all_shared_params, axis=0)
         std = np.std(all_shared_params, axis=0)
         with open(
-                os.path.join(path, "shared_params_avg_"+folder+".json"), "w"
+            os.path.join(path, "shared_params_avg_" + folder + ".json"), "w"
         ) as mf:
             json.dump(mean.tolist(), mf)
 
         with open(
-                os.path.join(path, "shared_params_std_"+folder+".json"), "w"
+            os.path.join(path, "shared_params_std_" + folder + ".json"), "w"
         ) as sf:
             json.dump(std.tolist(), sf)
 
         # copy jupyter notebook code
         percentile = np.percentile(mean, np.arange(0, 100, 1))
         plt.plot(np.arange(0, 100, 1), percentile, label=folder)
-        plt.title('Shared parameters Percentiles')
+        plt.title("Shared parameters Percentiles")
         # plt.ylabel("Absolute frequency value")
         plt.xlabel("Percentiles")
         plt.xticks(np.arange(0, 110, 10))
@@ -101,14 +101,15 @@ def plot_results(path):
         print(sort)
         length = sort.shape[0]
         length = int(length / 20)
-        bins = [torch.sum(sort[length * i: length * (i + 1)]).item() for i in range(20)]
+        bins = [
+            torch.sum(sort[length * i : length * (i + 1)]).item() for i in range(20)
+        ]
         total = np.sum(bins)
-        perc = bins / total #np.divide(bins, total)
+        perc = bins / total  # np.divide(bins, total)
         print(perc)
-        plt.bar(np.arange(0, 97.5, 5), perc, width=5, align='edge',
-                label=folder)
+        plt.bar(np.arange(0, 97.5, 5), perc, width=5, align="edge", label=folder)
 
-        plt.title('Shared parameters Percentiles')
+        plt.title("Shared parameters Percentiles")
         # plt.ylabel("Absolute frequency value")
         plt.xlabel("Percentiles")
         plt.legend(loc="lower right")

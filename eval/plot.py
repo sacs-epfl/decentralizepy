@@ -4,8 +4,8 @@ import sys
 
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
 import torch
+from matplotlib import pyplot as plt
 
 
 def get_stats(l):
