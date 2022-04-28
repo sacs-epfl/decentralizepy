@@ -1,3 +1,6 @@
+import networkx as nx
+import numpy as np
+
 class Graph:
     """
     This class defines the graph topology.
@@ -144,3 +147,20 @@ class Graph:
 
         """
         return self.adj_list[uid]
+
+    def centr(self):
+        my_adj = {x: list(adj) for x, adj in enumerate(self.adj_list)}
+        nxGraph = nx.Graph(my_adj)
+        a=nx.to_numpy_matrix(nxGraph)
+        self.averaging_weights = np.ones((self.n_procs, self.n_procs), dtype=float)
+        centrality= nx.betweenness_centrality(nxGraph)
+        for i in range(len(centrality)):
+            centrality[i]+=0.01
+        for i in range(self.averaging_weights.shape[0]):
+            s=0
+            for j in range(self.averaging_weights.shape[0]):
+                self.averaging_weights[i,j] = 1.0/centrality[j]
+                s += self.averaging_weights[i,j]
+            for j in range(self.averaging_weights.shape[0]):
+                self.averaging_weights[i,j]=self.averaging_weights[i,j]/s
+        return self.averaging_weights
