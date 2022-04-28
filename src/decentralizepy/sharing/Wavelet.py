@@ -179,7 +179,7 @@ class Wavelet(PartialModel):
             Model converted to json dict
 
         """
-        if self.alpha > self.metadata_cap:  # Share fully
+        if self.alpha >= self.metadata_cap:  # Share fully
             return super().serialized_model()
 
         with torch.no_grad():
@@ -218,6 +218,8 @@ class Wavelet(PartialModel):
 
             m["indices"] = indices.numpy().astype(np.int32)
 
+            m["send_partial"] = True
+
             self.total_data += len(self.communication.encrypt(m["params"]))
             self.total_meta += len(self.communication.encrypt(m["indices"])) + len(
                 self.communication.encrypt(m["alpha"])
@@ -240,7 +242,7 @@ class Wavelet(PartialModel):
             state_dict of received
 
         """
-        if self.alpha > self.metadata_cap:  # Share fully
+        if "send_partial" not in m:
             return super().deserialized_model(m)
 
         with torch.no_grad():

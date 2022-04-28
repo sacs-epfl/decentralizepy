@@ -1,10 +1,9 @@
 import random
 
-from decentralizepy.sharing.PartialModel import PartialModel
-from decentralizepy.utils import identity
+from decentralizepy.sharing.Wavelet import Wavelet
 
 
-class RandomAlpha(PartialModel):
+class RandomAlpha(Wavelet):
     """
     This class implements the partial model sharing with a random alpha each iteration.
 
@@ -24,9 +23,11 @@ class RandomAlpha(PartialModel):
         dict_ordered=True,
         save_shared=False,
         metadata_cap=1.0,
-        accumulation=False,
+        wavelet="haar",
+        level=4,
+        change_based_selection=True,
         save_accumulated="",
-        change_transformer=identity,
+        accumulation=False,
         accumulate_averaging_changes=False,
     ):
         """
@@ -71,10 +72,12 @@ class RandomAlpha(PartialModel):
             dict_ordered,
             save_shared,
             metadata_cap,
-            accumulation,
+            wavelet,
+            level,
+            change_based_selection,
             save_accumulated,
-            change_transformer,
-            accumulate_averaging_changes
+            accumulation,
+            accumulate_averaging_changes,
         )
         self.alpha_list = eval(alpha_list)
         random.seed(

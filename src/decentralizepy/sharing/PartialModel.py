@@ -201,6 +201,8 @@ class PartialModel(Sharing):
             if not self.dict_ordered:
                 raise NotImplementedError
 
+            m["alpha"] = self.alpha
+
             m["indices"] = G_topk.numpy().astype(np.int32)
 
             m["params"] = T_topk.numpy()
