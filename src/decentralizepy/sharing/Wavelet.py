@@ -148,9 +148,7 @@ class Wavelet(PartialModel):
         """
 
         logging.info("Returning wavelet compressed model weights")
-        tensors_to_cat = [v.data.flatten() for _, v in self.model.state_dict().items()]
-        concated = torch.cat(tensors_to_cat, dim=0)
-        data = self.change_transformer(concated)
+        data = self.pre_share_model_transformed
         if self.change_based_selection:
             diff = self.model.model_change
             _, index = torch.topk(
@@ -179,8 +177,14 @@ class Wavelet(PartialModel):
             Model converted to json dict
 
         """
+        m = dict()
         if self.alpha >= self.metadata_cap:  # Share fully
-            return super().serialized_model()
+            data = self.pre_share_model_transformed
+            m["params"] = data.numpy()
+            self.total_data += len(self.communication.encrypt(m["params"]))
+            if self.model.accumulated_changes is not None:
+                self.model.accumulated_changes = torch.zeros_like(self.model.accumulated_changes)
+            return m
 
         with torch.no_grad():
             topk, indices = self.apply_wavelet()
@@ -206,8 +210,6 @@ class Wavelet(PartialModel):
                     "w",
                 ) as of:
                     json.dump(shared_params, of)
-
-            m = dict()
 
             if not self.dict_ordered:
                 raise NotImplementedError
@@ -242,8 +244,12 @@ class Wavelet(PartialModel):
             state_dict of received
 
         """
+        ret = dict()
         if "send_partial" not in m:
-            return super().deserialized_model(m)
+            params = m["params"]
+            params_tensor = torch.tensor(params)
+            ret["params"] = params_tensor
+            return ret
 
         with torch.no_grad():
             if not self.dict_ordered:
@@ -258,7 +264,8 @@ class Wavelet(PartialModel):
             ret = dict()
             ret["indices"] = indices_tensor
             ret["params"] = params_tensor
-            return ret
+            ret["send_partial"] = True
+        return ret
 
     def _averaging(self):
         """
@@ -268,11 +275,7 @@ class Wavelet(PartialModel):
         with torch.no_grad():
             total = None
             weight_total = 0
-            tensors_to_cat = [
-                v.data.flatten() for _, v in self.model.state_dict().items()
-            ]
-            pre_share_model = torch.cat(tensors_to_cat, dim=0)
-            wt_params = self.change_transformer(pre_share_model)
+            wt_params = self.pre_share_model_transformed
             for i, n in enumerate(self.peer_deques):
                 degree, iteration, data = self.peer_deques[n].popleft()
                 logging.debug(
@@ -282,11 +285,14 @@ class Wavelet(PartialModel):
                 )
                 data = self.deserialized_model(data)
                 params = data["params"]
-                indices = data["indices"]
-                # use local data to complement
-                topkwf = wt_params.clone().detach()
-                topkwf[indices] = params
-                topkwf = topkwf.reshape(self.wt_shape)
+                if "indices" in data:
+                    indices = data["indices"]
+                    # use local data to complement
+                    topkwf = wt_params.clone().detach()
+                    topkwf[indices] = params
+                    topkwf = topkwf.reshape(self.wt_shape)
+                else:
+                    topkwf = params.reshape(self.wt_shape)
 
                 weight = 1 / (max(len(self.peer_deques), degree) + 1)  # Metro-Hastings
                 weight_total += weight

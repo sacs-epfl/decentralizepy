@@ -104,7 +104,7 @@ class PartialModel(Sharing):
                     self.change_transformer(self.init_model)
                 )
                 self.prev = self.init_model
-
+        self.number_of_params = self.init_model.shape[0]
         if self.save_accumulated:
             self.model_change_path = os.path.join(
                 self.log_dir, "model_change/{}".format(self.rank)
@@ -162,6 +162,8 @@ class PartialModel(Sharing):
 
         """
         if self.alpha >= self.metadata_cap:  # Share fully
+            if self.model.accumulated_changes is not None:
+                self.model.accumulated_changes = torch.zeros_like(self.model.accumulated_changes)
             return super().serialized_model()
 
         with torch.no_grad():
@@ -190,9 +192,7 @@ class PartialModel(Sharing):
 
             logging.info("Extracting topk params")
 
-            tensors_to_cat = [v.data.flatten() for v in self.model.parameters()]
-            T = torch.cat(tensors_to_cat, dim=0)
-            T_topk = T[G_topk]
+            T_topk = self.pre_share_model[G_topk]
 
             logging.info("Generating dictionary to send")
 
@@ -276,8 +276,10 @@ class PartialModel(Sharing):
             tensors_to_cat = [
                 v.data.flatten() for _, v in self.model.state_dict().items()
             ]
-            pre_share_model = torch.cat(tensors_to_cat, dim=0)
-            change = self.change_transformer(pre_share_model - self.init_model)
+            self.pre_share_model = torch.cat(tensors_to_cat, dim=0)
+            # Would only need one of the transforms
+            self.pre_share_model_transformed = self.change_transformer(self.pre_share_model)
+            change = self.change_transformer(self.pre_share_model - self.init_model)
             if self.accumulation:
                 if not self.accumulate_averaging_changes:
                     # Need to accumulate in _pre_step as the accumulation gets rewind during the step
