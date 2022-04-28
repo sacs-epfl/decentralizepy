@@ -4,9 +4,9 @@ from collections import deque
 import torch
 
 
-class Sharing:
+class Synchronous:
     """
-    API defining who to share with and what, and what to do on receiving
+    Synchronous training
 
     """
 
@@ -53,6 +53,11 @@ class Sharing:
         for n in self.my_neighbors:
             self.peer_deques[n] = deque()
 
+        with torch.no_grad():
+            self.init_model = {}
+            for k, v in self.model.state_dict().items():
+                self.init_model[k] = v.clone().detach()
+
     def received_from_all(self):
         """
         Check if all neighbors have sent the current iteration
@@ -86,6 +91,22 @@ class Sharing:
         # modify neighbors here
         return neighbors
 
+    def serialized_gradient(self):
+        """
+        Convert model to a dictionary. Here we can choose how much to share
+
+        Returns
+        -------
+        dict
+            Model converted to dict
+
+        """
+        m = dict()
+        for key, val in self.model.state_dict().items():
+            m[key] = val - self.init_model[key]  # this is -lr*gradient
+        self.total_data += len(self.communication.encrypt(m))
+        return m
+
     def serialized_model(self):
         """
         Convert model to a dictionary. Here we can choose how much to share
@@ -98,8 +119,8 @@ class Sharing:
         """
         m = dict()
         for key, val in self.model.state_dict().items():
-            m[key] = val.numpy()
-            self.total_data += len(self.communication.encrypt(m[key]))
+            m[key] = val.clone().detach()
+        self.total_data += len(self.communication.encrypt(m))
         return m
 
     def deserialized_model(self, m):
@@ -117,10 +138,7 @@ class Sharing:
             state_dict of received
 
         """
-        state_dict = dict()
-        for key, value in m.items():
-            state_dict[key] = torch.from_numpy(value)
-        return state_dict
+        return m
 
     def _pre_step(self):
         """
@@ -134,36 +152,44 @@ class Sharing:
         Called at the end of step.
 
         """
-        pass
+        with torch.no_grad():
+            self.init_model = {}
+            for k, v in self.model.state_dict().items():
+                self.init_model[k] = v.clone().detach()
 
-    def _averaging(self):
+    def _apply_gradients(self):
         """
         Averages the received model with the local model
 
         """
         with torch.no_grad():
             total = dict()
-            weight_total = 0
             for i, n in enumerate(self.peer_deques):
-                degree, iteration, data = self.peer_deques[n].popleft()
+                gradient = self.peer_deques[n].popleft()
                 logging.debug(
-                    "Averaging model from neighbor {} of iteration {}".format(
-                        n, iteration
+                    "Applying gradient from neighbor {}".format(
+                        n,
                     )
                 )
-                data = self.deserialized_model(data)
-                weight = 1 / (max(len(self.peer_deques), degree) + 1)  # Metro-Hastings
-                weight_total += weight
-                for key, value in data.items():
+                grad = self.deserialized_model(gradient)
+
+                for key, value in grad.items():
                     if key in total:
-                        total[key] += value * weight
+                        total[key] += value
                     else:
-                        total[key] = value * weight
+                        total[key] = value
 
-            for key, value in self.model.state_dict().items():
-                total[key] += (1 - weight_total) * value  # Metro-Hastings
+            my_grad = self.serialized_gradient()
+            for key, value in my_grad.items():
+                if key in total:
+                    total[key] += value
+                else:
+                    total[key] = value
+        new_model = {}
+        for key, value in self.init_model.items():
+            new_model[key] = value + total[key] * (1 / (len(self.my_neighbors) + 1))
 
-        self.model.load_state_dict(total)
+        self.model.load_state_dict(new_model)
 
     def step(self):
         """
@@ -171,33 +197,41 @@ class Sharing:
 
         """
         self._pre_step()
-        data = self.serialized_model()
-        my_uid = self.mapping.get_uid(self.rank, self.machine_id)
-        all_neighbors = self.graph.neighbors(my_uid)
-        iter_neighbors = self.get_neighbors(all_neighbors)
-        data["degree"] = len(all_neighbors)
-        data["iteration"] = self.communication_round
-        for neighbor in iter_neighbors:
-            self.communication.send(neighbor, data)
+        logging.info("--- COMMUNICATION ROUND {} ---".format(self.communication_round))
+        if self.uid != 0:
+            gradient = self.serialized_gradient()
+            # Should be only one neighbour
 
-        logging.info("Waiting for messages from neighbors")
-        while not self.received_from_all():
+            self.communication.send(0, gradient)
+
+            logging.info("Waiting for messages from central node")
             sender, data = self.communication.receive()
             logging.debug("Received model from {}".format(sender))
-            degree = data["degree"]
-            iteration = data["iteration"]
-            del data["degree"]
-            del data["iteration"]
-            self.peer_deques[sender].append((degree, iteration, data))
             logging.info(
                 "Deserialized received model from {} of iteration {}".format(
-                    sender, iteration
+                    sender, self.communication_round
                 )
             )
+            self.model.load_state_dict(data)
+        else:
+            logging.info("Waiting for messages from leaf nodes")
+            while not self.received_from_all():
+                sender, data = self.communication.receive()
+                logging.debug("Received gradient from {}".format(sender))
+                self.peer_deques[sender].append(data)
+                logging.info(
+                    "Deserialized gradient model from {} of iteration {}".format(
+                        sender, self.communication_round
+                    )
+                )
+            self._apply_gradients()
 
-        logging.info("Starting model averaging after receiving from all neighbors")
-        self._averaging()
-        logging.info("Model averaging complete")
+            data = self.serialized_model()
+
+            all_neighbors = self.graph.neighbors(self.uid)
+            iter_neighbors = self.get_neighbors(all_neighbors)
+            for neighbor in iter_neighbors:
+                self.communication.send(neighbor, data)
 
         self.communication_round += 1
         self._post_step()

@@ -105,6 +105,7 @@ def write_args(args, path):
         "graph_file": args.graph_file,
         "graph_type": args.graph_type,
         "test_after": args.test_after,
+        "train_evaluate_after": args.train_evaluate_after,
         "reset_optimizer": args.reset_optimizer,
     }
     with open(os.path.join(path, "args.json"), "w") as of:
