@@ -295,8 +295,11 @@ class Shakespeare(Dataset):
 
         """
         if self.__training__:
+            # Only using a subset of the training set. The full set is too large.
+            thirstiest = torch.arange(0, self.test_x.shape[0], 30)
             return DataLoader(
-                Data(self.train_x, self.train_y), batch_size=batch_size, shuffle=shuffle
+                Data(self.test_x[thirstiest], self.test_y[thirstiest]),
+                batch_size=self.test_batch_size,
             )
         raise RuntimeError("Training set not initialized!")
 

@@ -18,10 +18,8 @@
 # Each node needs a folder called 'tmp' in the user's home directory
 #
 # Note:
-# - The script does not change the optimizer. All configs are writen to use Adam.
-#   For SGD these need to be changed manually
-# - The script will set '--test_after' and '--train_evaluate_after' to comm_rounds_per_global_epoch, i.e., the eavaluation
-#   on the train set and on the test set is carried out every global epoch.
+# - The script does not change the optimizer. All configs are writen to use SGD.
+# - The script will set '--test_after' and '--train_evaluate_after' such that it happens at the end of a global epoch.
 # - The '--reset_optimizer' option is set to 0, i.e., the optimizer is not reset after a communication round (only
 #   relevant for Adams and other optimizers with internal state)
 #
@@ -39,7 +37,7 @@ decpy_path=$nfs_home/decentralizepy/eval
 cd $decpy_path
 
 env_python=$python_bin/python3
-graph=192_regular.edges
+graph=96_regular.edges
 config_file=~/tmp/config.ini
 procs_per_machine=16
 machines=6
@@ -62,7 +60,6 @@ batchsize=("8" "16")
 comm_rounds_per_global_epoch=("1" "5" "10")
 procs=`expr $procs_per_machine \* $machines`
 echo procs: $procs
-# Celeba has 63741 samples
 dataset_size=63741
 # Calculating the number of samples that each user/proc will have on average
 samples_per_user=`expr $dataset_size / $procs`
@@ -86,6 +83,8 @@ do
     new_iterations=$($env_python -c "from math import floor; tmp = floor($batches_per_epoch / $r); x = 1 if tmp == 0 else tmp; y = floor((($batches_per_epoch / $r)/x)*$iterations); print($iterations if y<$iterations else y)")
     echo batches per communication round: $batches_per_comm_round
     echo corrected iterations: $new_iterations
+    test_after=$(($new_iterations / $global_epochs))
+    echo test after: $test_after
     for lr in "${lrs[@]}"
     do
       for i in "${tests[@]}"
@@ -102,7 +101,7 @@ do
         $python_bin/crudini --set $config_file OPTIMIZER_PARAMS lr $lr
         $python_bin/crudini --set $config_file TRAIN_PARAMS rounds $batches_per_comm_round
         $python_bin/crudini --set $config_file TRAIN_PARAMS batch_size $b
-        $env_python $eval_file -ro 0 -tea $r -ld $log_dir -mid $m -ps $procs_per_machine -ms $machines -is $new_iterations -gf $graph -ta $r -cf $config_file -ll $log_level
+        $env_python $eval_file -ro 0 -tea $test_after -ld $log_dir -mid $m -ps $procs_per_machine -ms $machines -is $new_iterations -gf $graph -ta $test_after -cf $config_file -ll $log_level
         echo $i is done
         sleep 1
         echo end of sleep

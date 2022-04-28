@@ -128,11 +128,8 @@ class FFT(PartialModel):
 
         logging.info("Returning fft compressed model weights")
         with torch.no_grad():
-            tensors_to_cat = [
-                v.data.flatten() for _, v in self.model.state_dict().items()
-            ]
-            concated = torch.cat(tensors_to_cat, dim=0)
-            flat_fft = self.change_transformer(concated)
+
+            flat_fft = self.pre_share_model_transformed
             if self.change_based_selection:
                 diff = self.model.model_change
                 _, index = torch.topk(
@@ -158,8 +155,15 @@ class FFT(PartialModel):
             Model converted to json dict
 
         """
-        if self.alpha > self.metadata_cap:  # Share fully
-            return super().serialized_model()
+        m = dict()
+        if self.alpha >= self.metadata_cap:  # Share fully
+            data = self.pre_share_model_transformed
+            m["params"] = data.numpy()
+            self.total_data += len(self.communication.encrypt(m["params"]))
+            if self.model.accumulated_changes is not None:
+                self.model.accumulated_changes = torch.zeros_like(self.model.accumulated_changes)
+            return m
+
 
         with torch.no_grad():
             topk, indices = self.apply_fft()
@@ -187,14 +191,13 @@ class FFT(PartialModel):
                 ) as of:
                     json.dump(shared_params, of)
 
-            m = dict()
-
             if not self.dict_ordered:
                 raise NotImplementedError
 
             m["alpha"] = self.alpha
             m["params"] = topk.numpy()
             m["indices"] = indices.numpy().astype(np.int32)
+            m["send_partial"] = True
 
             self.total_data += len(self.communication.encrypt(m["params"]))
             self.total_meta += len(self.communication.encrypt(m["indices"])) + len(
@@ -218,8 +221,11 @@ class FFT(PartialModel):
             state_dict of received
 
         """
-        if self.alpha > self.metadata_cap:  # Share fully
-            return super().deserialized_model(m)
+        ret = dict()
+        if "send_partial" not in m:
+            params = m["params"]
+            params_tensor = torch.tensor(params)
+            ret["params"] = params_tensor
 
         with torch.no_grad():
             if not self.dict_ordered:
@@ -231,9 +237,9 @@ class FFT(PartialModel):
 
             params_tensor = torch.tensor(params)
             indices_tensor = torch.tensor(indices, dtype=torch.long)
-            ret = dict()
             ret["indices"] = indices_tensor
             ret["params"] = params_tensor
+            ret["send_partial"] = True
         return ret
 
     def _averaging(self):
@@ -259,10 +265,13 @@ class FFT(PartialModel):
                 )
                 data = self.deserialized_model(data)
                 params = data["params"]
-                indices = data["indices"]
-                # use local data to complement
-                topkf = flat_fft.clone().detach()
-                topkf[indices] = params
+                if "indices" in data:
+                    indices = data["indices"]
+                    # use local data to complement
+                    topkf = flat_fft.clone().detach()
+                    topkf[indices] = params
+                else:
+                    topkf = params
 
                 weight = 1 / (max(len(self.peer_deques), degree) + 1)  # Metro-Hastings
                 weight_total += weight
