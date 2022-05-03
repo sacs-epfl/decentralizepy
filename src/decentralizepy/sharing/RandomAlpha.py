@@ -20,7 +20,7 @@ class RandomAlpha(PartialModel):
         model,
         dataset,
         log_dir,
-        alpha_list=[0.1,0.2,0.3,0.4,1.0],
+        alpha_list=[0.1, 0.2, 0.3, 0.4, 1.0],
         dict_ordered=True,
         save_shared=False,
         metadata_cap=1.0,
@@ -74,12 +74,10 @@ class RandomAlpha(PartialModel):
             accumulation,
             save_accumulated,
             change_transformer,
-            accumulate_averaging_changes
+            accumulate_averaging_changes,
         )
         self.alpha_list = eval(alpha_list)
-        random.seed(
-            self.mapping.get_uid(self.rank, self.machine_id)
-        )
+        random.seed(self.mapping.get_uid(self.rank, self.machine_id))
 
     def step(self):
         """

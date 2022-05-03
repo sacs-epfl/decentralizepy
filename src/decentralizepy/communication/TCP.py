@@ -36,11 +36,18 @@ class TCP(Communication):
 
         """
         machine_addr = self.ip_addrs[str(machine_id)]
-        port = rank + 20000
+        port = rank + self.offset
         return "tcp://{}:{}".format(machine_addr, port)
 
     def __init__(
-        self, rank, machine_id, mapping, total_procs, addresses_filepath, compress=False
+        self,
+        rank,
+        machine_id,
+        mapping,
+        total_procs,
+        addresses_filepath,
+        compress=False,
+        offset=20000,
     ):
         """
         Constructor
@@ -68,6 +75,7 @@ class TCP(Communication):
         self.rank = rank
         self.machine_id = machine_id
         self.mapping = mapping
+        self.offset = 20000 + offset
         self.uid = mapping.get_uid(rank, machine_id)
         self.identity = str(self.uid).encode()
         self.context = zmq.Context()

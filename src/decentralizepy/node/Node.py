@@ -8,8 +8,11 @@ import torch
 from matplotlib import pyplot as plt
 
 from decentralizepy import utils
+from decentralizepy.communication.TCP import TCP
 from decentralizepy.graphs.Graph import Graph
+from decentralizepy.graphs.Star import Star
 from decentralizepy.mappings.Mapping import Mapping
+from decentralizepy.train_test_evaluation import TrainTestHelper
 
 
 class Node:
@@ -76,9 +79,12 @@ class Node:
         graph,
         iterations,
         log_dir,
+        weights_store_dir,
         test_after,
         train_evaluate_after,
         reset_optimizer,
+        centralized_train_eval,
+        centralized_test_eval,
     ):
         """
         Instantiate object field with arguments.
@@ -97,13 +103,18 @@ class Node:
             Number of iterations (communication steps) for which the model should be trained
         log_dir : str
             Logging directory
+        weights_store_dir : str
+            Directory in which to store model weights
         test_after : int
             Number of iterations after which the test loss and accuracy arecalculated
         train_evaluate_after : int
             Number of iterations after which the train loss is calculated
         reset_optimizer : int
             1 if optimizer should be reset every communication round, else 0
-
+        centralized_train_eval : bool
+            If set the train set evaluation happens at the node with uid 0
+        centralized_test_eval : bool
+            If set the train set evaluation happens at the node with uid 0
         """
         self.rank = rank
         self.machine_id = machine_id
@@ -111,14 +122,19 @@ class Node:
         self.mapping = mapping
         self.uid = self.mapping.get_uid(rank, machine_id)
         self.log_dir = log_dir
+        self.weights_store_dir = weights_store_dir
         self.iterations = iterations
         self.test_after = test_after
         self.train_evaluate_after = train_evaluate_after
         self.reset_optimizer = reset_optimizer
+        self.centralized_train_eval = centralized_train_eval
+        self.centralized_test_eval = centralized_test_eval
 
         logging.debug("Rank: %d", self.rank)
         logging.debug("type(graph): %s", str(type(self.rank)))
         logging.debug("type(mapping): %s", str(type(self.mapping)))
+
+        self.star = Star(self.mapping.get_n_procs())
 
     def init_dataset_model(self, dataset_configs):
         """
@@ -226,6 +242,7 @@ class Node:
         comm_module = importlib.import_module(comm_configs["comm_package"])
         comm_class = getattr(comm_module, comm_configs["comm_class"])
         comm_params = utils.remove_keys(comm_configs, ["comm_package", "comm_class"])
+        self.addresses_filepath = comm_params.get("addresses_filepath", None)
         self.communication = comm_class(
             self.rank, self.machine_id, self.mapping, self.graph.n_procs, **comm_params
         )
@@ -266,10 +283,13 @@ class Node:
         config,
         iterations=1,
         log_dir=".",
+        weights_store_dir=".",
         log_level=logging.INFO,
         test_after=5,
         train_evaluate_after=1,
         reset_optimizer=1,
+        centralized_train_eval=False,
+        centralized_test_eval=True,
         *args
     ):
         """
@@ -291,6 +311,8 @@ class Node:
             Number of iterations (communication steps) for which the model should be trained
         log_dir : str
             Logging directory
+        weights_store_dir : str
+            Directory in which to store model weights
         log_level : logging.Level
             One of DEBUG, INFO, WARNING, ERROR, CRITICAL
         test_after : int
@@ -299,6 +321,10 @@ class Node:
             Number of iterations after which the train loss is calculated
         reset_optimizer : int
             1 if optimizer should be reset every communication round, else 0
+        centralized_train_eval : bool
+            If set the train set evaluation happens at the node with uid 0
+        centralized_test_eval : bool
+            If set the train set evaluation happens at the node with uid 0
         args : optional
             Other arguments
 
@@ -312,9 +338,12 @@ class Node:
             graph,
             iterations,
             log_dir,
+            weights_store_dir,
             test_after,
             train_evaluate_after,
             reset_optimizer,
+            centralized_train_eval,
+            centralized_test_eval,
         )
         self.init_log(log_dir, rank, log_level)
         self.init_dataset_model(config["DATASET"])
@@ -331,7 +360,46 @@ class Node:
         self.testset = self.dataset.get_testset()
         self.communication.connect_neighbors(self.graph.neighbors(self.uid))
         rounds_to_test = self.test_after
+
+        testing_comm = TCP(
+            self.rank,
+            self.machine_id,
+            self.mapping,
+            self.star.n_procs,
+            self.addresses_filepath,
+            offset=self.star.n_procs,
+        )
+        testing_comm.connect_neighbors(self.star.neighbors(self.uid))
         rounds_to_train_evaluate = self.train_evaluate_after
+        global_epoch = 1
+        change = 1
+        if self.uid == 0:
+            dataset = self.dataset
+            if self.centralized_train_eval:
+                dataset_params_copy = self.dataset_params.copy()
+                if "sizes" in dataset_params_copy:
+                    del dataset_params_copy["sizes"]
+                self.whole_dataset = self.dataset_class(
+                    self.rank,
+                    self.machine_id,
+                    self.mapping,
+                    sizes=[1.0],
+                    **dataset_params_copy
+                )
+                dataset = self.whole_dataset
+            tthelper = TrainTestHelper(
+                dataset,  # self.whole_dataset,
+                # self.model_test, # todo: this only works if eval_train is set to false
+                self.model,
+                self.loss,
+                self.weights_store_dir,
+                self.mapping.get_n_procs(),
+                self.trainer,
+                testing_comm,
+                self.star,
+                self.threads_per_proc,
+                eval_train=self.centralized_train_eval,
+            )
 
         for iteration in range(self.iterations):
             logging.info("Starting training iteration: %d", iteration)
@@ -378,9 +446,9 @@ class Node:
 
             rounds_to_train_evaluate -= 1
 
-            if rounds_to_train_evaluate == 0:
+            if rounds_to_train_evaluate == 0 and not self.centralized_train_eval:
                 logging.info("Evaluating on train set.")
-                rounds_to_train_evaluate = self.train_evaluate_after
+                rounds_to_train_evaluate = self.train_evaluate_after * change
                 loss_after_sharing = self.trainer.eval_loss(self.dataset)
                 results_dict["train_loss"][iteration + 1] = loss_after_sharing
                 self.save_plot(
@@ -394,26 +462,30 @@ class Node:
             rounds_to_test -= 1
 
             if self.dataset.__testing__ and rounds_to_test == 0:
-                logging.info("Evaluating on test set.")
-                rounds_to_test = self.test_after
-                ta, tl = self.dataset.test(self.model, self.loss)
-                results_dict["test_acc"][iteration + 1] = ta
-                results_dict["test_loss"][iteration + 1] = tl
+                rounds_to_test = self.test_after * change
+                # ta, tl = self.dataset.test(self.model, self.loss)
+                # self.model.dump_weights(self.weights_store_dir, self.uid, iteration)
+                if self.centralized_test_eval:
+                    if self.uid == 0:
+                        ta, tl, trl = tthelper.train_test_evaluation(iteration)
+                        results_dict["test_acc"][iteration + 1] = ta
+                        results_dict["test_loss"][iteration + 1] = tl
+                        if trl is not None:
+                            results_dict["train_loss"][iteration + 1] = trl
+                    else:
+                        testing_comm.send(0, self.model.get_weights())
+                        sender, data = testing_comm.receive()
+                        assert sender == 0 and data == "finished"
+                else:
+                    logging.info("Evaluating on test set.")
+                    ta, tl = self.dataset.test(self.model, self.loss)
+                    results_dict["test_acc"][iteration + 1] = ta
+                    results_dict["test_loss"][iteration + 1] = tl
 
-                self.save_plot(
-                    results_dict["test_loss"],
-                    "test_loss",
-                    "Testing Loss",
-                    "Communication Rounds",
-                    os.path.join(self.log_dir, "{}_test_loss.png".format(self.rank)),
-                )
-                self.save_plot(
-                    results_dict["test_acc"],
-                    "test_acc",
-                    "Testing Accuracy",
-                    "Communication Rounds",
-                    os.path.join(self.log_dir, "{}_test_acc.png".format(self.rank)),
-                )
+                if global_epoch == 49:
+                    change *= 2
+
+                global_epoch += change
 
             with open(
                 os.path.join(self.log_dir, "{}_results.json".format(self.rank)), "w"
@@ -429,6 +501,8 @@ class Node:
             ) as of:
                 json.dump(self.model.shared_parameters_counter.numpy().tolist(), of)
         self.communication.disconnect_neighbors()
+        logging.info("Storing final weight")
+        self.model.dump_weights(self.weights_store_dir, self.uid, iteration)
         logging.info("All neighbors disconnected. Process complete!")
 
     def __init__(
@@ -440,10 +514,13 @@ class Node:
         config,
         iterations=1,
         log_dir=".",
+        weights_store_dir=".",
         log_level=logging.INFO,
         test_after=5,
         train_evaluate_after=1,
         reset_optimizer=1,
+        centralized_train_eval=0,
+        centralized_test_eval=1,
         *args
     ):
         """
@@ -477,6 +554,8 @@ class Node:
             Number of iterations (communication steps) for which the model should be trained
         log_dir : str
             Logging directory
+        weights_store_dir : str
+            Directory in which to store model weights
         log_level : logging.Level
             One of DEBUG, INFO, WARNING, ERROR, CRITICAL
         test_after : int
@@ -485,13 +564,25 @@ class Node:
             Number of iterations after which the train loss is calculated
         reset_optimizer : int
             1 if optimizer should be reset every communication round, else 0
+        centralized_train_eval : int
+            If set then the train set evaluation happens at the node with uid 0.
+            Note: If it is True then centralized_test_eval needs to be true as well!
+        centralized_test_eval : int
+            If set then the trainset evaluation happens at the node with uid 0
         args : optional
             Other arguments
 
         """
+        centralized_train_eval = centralized_train_eval == 1
+        centralized_test_eval = centralized_test_eval == 1
+        # If centralized_train_eval is True then centralized_test_eval needs to be true as well!
+        assert not centralized_train_eval or centralized_test_eval
+
         total_threads = os.cpu_count()
-        threads_per_proc = max(math.floor(total_threads / mapping.procs_per_machine), 1)
-        torch.set_num_threads(threads_per_proc)
+        self.threads_per_proc = max(
+            math.floor(total_threads / mapping.procs_per_machine), 1
+        )
+        torch.set_num_threads(self.threads_per_proc)
         torch.set_num_interop_threads(1)
         self.instantiate(
             rank,
@@ -501,14 +592,17 @@ class Node:
             config,
             iterations,
             log_dir,
+            weights_store_dir,
             log_level,
             test_after,
             train_evaluate_after,
             reset_optimizer,
+            centralized_train_eval == 1,
+            centralized_test_eval == 1,
             *args
         )
         logging.info(
-            "Each proc uses %d threads out of %d.", threads_per_proc, total_threads
+            "Each proc uses %d threads out of %d.", self.threads_per_proc, total_threads
         )
 
         self.run()

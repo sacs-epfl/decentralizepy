@@ -1,3 +1,7 @@
+import pickle
+from pathlib import Path
+
+import torch
 from torch import nn
 
 
@@ -58,3 +62,39 @@ class Model(nn.Module):
         """
         if self.accumulated_changes is not None:
             self.accumulated_changes[indices] = 0.0
+
+    def dump_weights(self, directory, uid, round):
+        """
+        dumps the current model as a pickle file into the specified direcectory
+
+        Parameters
+        ----------
+        directory : str
+            directory in which the weights are dumped
+        uid : int
+            uid of the node, will be used to give the weight a unique name
+        round : int
+            current round, will be used to give the weight a unique name
+
+        """
+        with torch.no_grad():
+            tensors_to_cat = []
+            for _, v in self.state_dict().items():
+                tensors_to_cat.append(v.flatten())
+            flat = torch.cat(tensors_to_cat)
+
+        with open(Path(directory) / f"{round}_weight_{uid}.pk", "wb") as f:
+            pickle.dump(flat, f)
+
+    def get_weights(self):
+        """
+        flattens the current weights
+
+        """
+        with torch.no_grad():
+            tensors_to_cat = []
+            for _, v in self.state_dict().items():
+                tensors_to_cat.append(v.flatten())
+            flat = torch.cat(tensors_to_cat)
+
+        return flat
