@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -35,7 +36,7 @@ def plot(means, stdevs, mins, maxs, title, label, loc):
     plt.legend(loc=loc)
 
 
-def plot_results(path):
+def plot_results(path, data_machine="machine0", data_node=0):
     folders = os.listdir(path)
     folders.sort()
     print("Reading folders from: ", path)
@@ -44,8 +45,8 @@ def plot_results(path):
     meta_means, meta_stdevs = {}, {}
     data_means, data_stdevs = {}, {}
     for folder in folders:
-        folder_path = os.path.join(path, folder)
-        if not os.path.isdir(folder_path):
+        folder_path = Path(os.path.join(path, folder))
+        if not folder_path.is_dir() or "weights" == folder_path.name:
             continue
         results = []
         machine_folders = os.listdir(folder_path)
@@ -59,6 +60,10 @@ def plot_results(path):
                 filepath = os.path.join(mf_path, f)
                 with open(filepath, "r") as inf:
                     results.append(json.load(inf))
+
+        with open(folder_path / data_machine / f"{data_node}_results.json", "r") as f:
+            main_data = json.load(f)
+        main_data = [main_data]
         # Plot Training loss
         plt.figure(1)
         means, stdevs, mins, maxs = get_stats([x["train_loss"] for x in results])
@@ -77,7 +82,7 @@ def plot_results(path):
         )
         # Plot Testing loss
         plt.figure(2)
-        means, stdevs, mins, maxs = get_stats([x["test_loss"] for x in results])
+        means, stdevs, mins, maxs = get_stats([x["test_loss"] for x in main_data])
         plot(means, stdevs, mins, maxs, "Testing Loss", folder, "upper right")
         df = pd.DataFrame(
             {
@@ -93,7 +98,7 @@ def plot_results(path):
         )
         # Plot Testing Accuracy
         plt.figure(3)
-        means, stdevs, mins, maxs = get_stats([x["test_acc"] for x in results])
+        means, stdevs, mins, maxs = get_stats([x["test_acc"] for x in main_data])
         plot(means, stdevs, mins, maxs, "Testing Accuracy", folder, "lower right")
         df = pd.DataFrame(
             {

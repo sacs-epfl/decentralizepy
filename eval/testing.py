@@ -60,9 +60,12 @@ if __name__ == "__main__":
             my_config,
             args.iterations,
             args.log_dir,
+            args.weights_store_dir,
             log_level[args.log_level],
             args.test_after,
             args.train_evaluate_after,
             args.reset_optimizer,
+            args.centralized_train_eval,
+            args.centralized_test_eval,
         ],
     )

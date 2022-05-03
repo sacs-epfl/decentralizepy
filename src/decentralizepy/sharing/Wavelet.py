@@ -183,7 +183,9 @@ class Wavelet(PartialModel):
             m["params"] = data.numpy()
             self.total_data += len(self.communication.encrypt(m["params"]))
             if self.model.accumulated_changes is not None:
-                self.model.accumulated_changes = torch.zeros_like(self.model.accumulated_changes)
+                self.model.accumulated_changes = torch.zeros_like(
+                    self.model.accumulated_changes
+                )
             return m
 
         with torch.no_grad():

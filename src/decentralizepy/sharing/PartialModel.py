@@ -163,7 +163,9 @@ class PartialModel(Sharing):
         """
         if self.alpha >= self.metadata_cap:  # Share fully
             if self.model.accumulated_changes is not None:
-                self.model.accumulated_changes = torch.zeros_like(self.model.accumulated_changes)
+                self.model.accumulated_changes = torch.zeros_like(
+                    self.model.accumulated_changes
+                )
             return super().serialized_model()
 
         with torch.no_grad():
@@ -278,7 +280,9 @@ class PartialModel(Sharing):
             ]
             self.pre_share_model = torch.cat(tensors_to_cat, dim=0)
             # Would only need one of the transforms
-            self.pre_share_model_transformed = self.change_transformer(self.pre_share_model)
+            self.pre_share_model_transformed = self.change_transformer(
+                self.pre_share_model
+            )
             change = self.change_transformer(self.pre_share_model - self.init_model)
             if self.accumulation:
                 if not self.accumulate_averaging_changes:

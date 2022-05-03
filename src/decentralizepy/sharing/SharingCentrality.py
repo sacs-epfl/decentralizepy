@@ -153,7 +153,7 @@ class Sharing:
                     )
                 )
                 data = self.deserialized_model(data)
-                weight = self.averaging_weights[self.uid,n]
+                weight = self.averaging_weights[self.uid, n]
                 for key, value in data.items():
                     if key in total:
                         total[key] += value * weight
@@ -161,7 +161,9 @@ class Sharing:
                         total[key] = value * weight
 
             for key, value in self.model.state_dict().items():
-                total[key] += self.averaging_weights[self.uid,self.uid] * value  # Metro-Hastings
+                total[key] += (
+                    self.averaging_weights[self.uid, self.uid] * value
+                )  # Metro-Hastings
 
         self.model.load_state_dict(total)
 

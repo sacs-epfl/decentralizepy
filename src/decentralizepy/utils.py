@@ -69,6 +69,12 @@ def get_args():
         type=str,
         default="./{}".format(datetime.datetime.now().isoformat(timespec="minutes")),
     )
+    parser.add_argument(
+        "-wsd",
+        "--weights_store_dir",
+        type=str,
+        default="./{}_ws".format(datetime.datetime.now().isoformat(timespec="minutes")),
+    )
     parser.add_argument("-is", "--iterations", type=int, default=1)
     parser.add_argument("-cf", "--config_file", type=str, default="config.ini")
     parser.add_argument("-ll", "--log_level", type=str, default="INFO")
@@ -77,6 +83,8 @@ def get_args():
     parser.add_argument("-ta", "--test_after", type=int, default=5)
     parser.add_argument("-tea", "--train_evaluate_after", type=int, default=1)
     parser.add_argument("-ro", "--reset_optimizer", type=int, default=1)
+    parser.add_argument("-ctr", "--centralized_train_eval", type=int, default=0)
+    parser.add_argument("-cte", "--centralized_test_eval", type=int, default=1)
 
     args = parser.parse_args()
     return args
@@ -99,6 +107,7 @@ def write_args(args, path):
         "procs_per_machine": args.procs_per_machine,
         "machines": args.machines,
         "log_dir": args.log_dir,
+        "weights_store_dir": args.weights_store_dir,
         "iterations": args.iterations,
         "config_file": args.config_file,
         "log_level": args.log_level,
@@ -107,6 +116,8 @@ def write_args(args, path):
         "test_after": args.test_after,
         "train_evaluate_after": args.train_evaluate_after,
         "reset_optimizer": args.reset_optimizer,
+        "centralized_train_eval": args.centralized_train_eval,
+        "centralized_test_eval": args.centralized_test_eval,
     }
     with open(os.path.join(path, "args.json"), "w") as of:
         json.dump(data, of)
