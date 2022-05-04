@@ -36,8 +36,14 @@ def plot(means, stdevs, mins, maxs, title, label, loc):
     plt.legend(loc=loc)
 
 
-def plot_results(path, data_machine="machine0", data_node=0):
+def plot_results(path, centralized, data_machine="machine0", data_node=0):
     folders = os.listdir(path)
+    if centralized.lower() in ['true', '1', 't', 'y', 'yes']:
+        centralized = True
+        print("Centralized")
+    else:
+        centralized = False
+
     folders.sort()
     print("Reading folders from: ", path)
     print("Folders: ", folders)
@@ -82,7 +88,10 @@ def plot_results(path, data_machine="machine0", data_node=0):
         )
         # Plot Testing loss
         plt.figure(2)
-        means, stdevs, mins, maxs = get_stats([x["test_loss"] for x in main_data])
+        if centralized:
+            means, stdevs, mins, maxs = get_stats([x["test_loss"] for x in main_data])
+        else:
+            means, stdevs, mins, maxs = get_stats([x["test_loss"] for x in results])
         plot(means, stdevs, mins, maxs, "Testing Loss", folder, "upper right")
         df = pd.DataFrame(
             {
@@ -98,7 +107,10 @@ def plot_results(path, data_machine="machine0", data_node=0):
         )
         # Plot Testing Accuracy
         plt.figure(3)
-        means, stdevs, mins, maxs = get_stats([x["test_acc"] for x in main_data])
+        if centralized:
+            means, stdevs, mins, maxs = get_stats([x["test_acc"] for x in main_data])
+        else:
+            means, stdevs, mins, maxs = get_stats([x["test_acc"] for x in results])
         plot(means, stdevs, mins, maxs, "Testing Accuracy", folder, "lower right")
         df = pd.DataFrame(
             {
@@ -241,6 +253,9 @@ def plot_parameters(path):
 
 
 if __name__ == "__main__":
-    assert len(sys.argv) == 2
-    plot_results(sys.argv[1])
+    assert len(sys.argv) == 3
+    # The args are:
+    # 1: the folder with the data
+    # 2: True/False: If True then the evaluation on the test set was centralized
+    plot_results(sys.argv[1], sys.argv[2])
     # plot_parameters(sys.argv[1])
