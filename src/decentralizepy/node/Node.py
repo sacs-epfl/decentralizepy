@@ -433,12 +433,14 @@ class Node:
 
             results_dict["total_bytes"][iteration + 1] = self.communication.total_bytes
 
-            if hasattr(self.sharing, "total_meta"):
-                results_dict["total_meta"][iteration + 1] = self.sharing.total_meta
-            if hasattr(self.sharing, "total_data"):
+            if hasattr(self.communication, "total_meta"):
+                results_dict["total_meta"][
+                    iteration + 1
+                ] = self.communication.total_meta
+            if hasattr(self.communication, "total_data"):
                 results_dict["total_data_per_n"][
                     iteration + 1
-                ] = self.sharing.total_data
+                ] = self.communication.total_data
             if hasattr(self.sharing, "mean"):
                 results_dict["grad_mean"][iteration + 1] = self.sharing.mean
             if hasattr(self.sharing, "std"):

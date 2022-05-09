@@ -142,7 +142,7 @@ class FFT(PartialModel):
                     dim=0,
                     sorted=False,
                 )
-
+        index, _ = torch.sort(index)
         return flat_fft[index], index
 
     def serialized_model(self):

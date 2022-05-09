@@ -1,6 +1,6 @@
+import importlib
 import json
 import logging
-import lzma
 import pickle
 from collections import deque
 
@@ -48,6 +48,8 @@ class TCP(Communication):
         addresses_filepath,
         compress=False,
         offset=20000,
+        compression_package=None,
+        compression_class=None,
     ):
         """
         Constructor
@@ -64,6 +66,10 @@ class TCP(Communication):
             Total number of processes
         addresses_filepath : str
             JSON file with machine_id -> ip mapping
+        compression_package : str
+            Import path of a module that implements the compression.Compression.Compression class
+        compression_class : str
+            Name of the compression class inside the compression package
 
         """
         super().__init__(rank, machine_id, mapping, total_procs)
@@ -84,6 +90,17 @@ class TCP(Communication):
         self.router.bind(self.addr(rank, machine_id))
         self.sent_disconnections = False
         self.compress = compress
+
+        if compression_package and compression_class:
+            compressor_module = importlib.import_module(compression_package)
+            compressor_class = getattr(compressor_module, compression_class)
+            self.compressor = compressor_class()
+            logging.info(f"Using the {compressor_class} to compress the data")
+        else:
+            assert not self.compress
+
+        self.total_data = 0
+        self.total_meta = 0
 
         self.peer_deque = deque()
         self.peer_sockets = dict()
@@ -112,11 +129,27 @@ class TCP(Communication):
 
         """
         if self.compress:
-            compressor = lzma.LZMACompressor()
-            output = compressor.compress(pickle.dumps(data)) + compressor.flush()
+            if "indices" in data:
+                data["indices"] = self.compressor.compress(data["indices"])
+                meta_len = len(
+                    pickle.dumps(data["indices"])
+                )  # ONLY necessary for the statistics
+            if "params" in data:
+                data["params"] = self.compressor.compress_float(data["params"])
+            output = pickle.dumps(data)
+            # the compressed meta data gets only a few bytes smaller after pickling
+            self.total_meta += meta_len
+            self.total_data += len(output) - meta_len
         else:
             output = pickle.dumps(data)
-
+            # centralized testing uses its own instance
+            if type(data) == dict:
+                if "indices" in data:
+                    meta_len = len(pickle.dumps(data["indices"]))
+                else:
+                    meta_len = 0
+                self.total_meta += meta_len
+                self.total_data += len(output) - meta_len
         return output
 
     def decrypt(self, sender, data):
@@ -138,7 +171,11 @@ class TCP(Communication):
         """
         sender = int(sender.decode())
         if self.compress:
-            data = pickle.loads(lzma.decompress(data))
+            data = pickle.loads(data)
+            if "indices" in data:
+                data["indices"] = self.compressor.decompress(data["indices"])
+            if "params" in data:
+                data["params"] = self.compressor.decompress_float(data["params"])
         else:
             data = pickle.loads(data)
         return sender, data
@@ -226,7 +263,7 @@ class TCP(Communication):
             logging.debug("Received message from {}".format(sender))
             return self.decrypt(sender, recv)
 
-    def send(self, uid, data):
+    def send(self, uid, data, encrypt=True):
         """
         Send a message to a process.
 
@@ -239,7 +276,10 @@ class TCP(Communication):
 
         """
         assert self.initialized == True
-        to_send = self.encrypt(data)
+        if encrypt:
+            to_send = self.encrypt(data)
+        else:
+            to_send = data
         data_size = len(to_send)
         self.total_bytes += data_size
         id = str(uid).encode()

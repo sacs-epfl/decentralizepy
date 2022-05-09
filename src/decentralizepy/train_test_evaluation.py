@@ -36,6 +36,7 @@ class TrainTestHelper:
 
     def train_test_evaluation(self, iteration):
         with torch.no_grad():
+            self.model.eval()
             total_threads = os.cpu_count()
             torch.set_num_threads(total_threads)
 
@@ -49,7 +50,7 @@ class TrainTestHelper:
                 clone_val = val.clone().detach()
                 state_dict_copy[key] = clone_val
                 flat = clone_val.flatten()
-                to_cat.append(clone_val.flatten())
+                to_cat.append(flat)
                 lens.append(flat.shape[0])
 
             my_weight = torch.cat(to_cat)
@@ -90,4 +91,5 @@ class TrainTestHelper:
             torch.set_num_threads(self.threads_per_proc)
             for neighbor in neighbors:
                 self.comm.send(neighbor, "finished")
-            return ta, tl, trl
+            self.model.train()
+        return ta, tl, trl

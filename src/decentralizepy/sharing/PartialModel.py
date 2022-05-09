@@ -147,9 +147,12 @@ class PartialModel(Sharing):
         std, mean = torch.std_mean(G_topk, unbiased=False)
         self.std = std.item()
         self.mean = mean.item()
-        return torch.topk(
-            G_topk, round(self.alpha * G_topk.shape[0]), dim=0, sorted=False
+        _, index = torch.topk(
+            G_topk, round(self.alpha * G_topk.shape[0]), dim=0, sorted=True
         )
+
+        index, _ = torch.sort(index)
+        return _, index
 
     def serialized_model(self):
         """
@@ -217,8 +220,6 @@ class PartialModel(Sharing):
             logging.info("Generated dictionary to send")
 
             logging.info("Converted dictionary to pickle")
-            self.total_data += len(self.communication.encrypt(m["params"]))
-            self.total_meta += len(self.communication.encrypt(m["indices"]))
 
             return m
 

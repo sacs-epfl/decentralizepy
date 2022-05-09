@@ -177,8 +177,9 @@ class Sharing:
         iter_neighbors = self.get_neighbors(all_neighbors)
         data["degree"] = len(all_neighbors)
         data["iteration"] = self.communication_round
+        encrypted = self.communication.encrypt(data)
         for neighbor in iter_neighbors:
-            self.communication.send(neighbor, data)
+            self.communication.send(neighbor, encrypted, encrypt=False)
 
         logging.info("Waiting for messages from neighbors")
         while not self.received_from_all():
