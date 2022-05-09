@@ -164,7 +164,7 @@ class Wavelet(PartialModel):
                 dim=0,
                 sorted=False,
             )
-
+        index, _ = torch.sort(index)
         return data[index], index
 
     def serialized_model(self):
@@ -224,11 +224,6 @@ class Wavelet(PartialModel):
 
             m["send_partial"] = True
 
-            self.total_data += len(self.communication.encrypt(m["params"]))
-            self.total_meta += len(self.communication.encrypt(m["indices"])) + len(
-                self.communication.encrypt(m["alpha"])
-            )
-
             return m
 
     def deserialized_model(self, m):
@@ -256,13 +251,10 @@ class Wavelet(PartialModel):
         with torch.no_grad():
             if not self.dict_ordered:
                 raise NotImplementedError
-
-            indices = m["indices"]
             alpha = m["alpha"]
-            params = m["params"]
 
-            params_tensor = torch.tensor(params)
-            indices_tensor = torch.tensor(indices, dtype=torch.long)
+            params_tensor = torch.tensor(m["params"])
+            indices_tensor = torch.tensor(m["indices"], dtype=torch.long)
             ret = dict()
             ret["indices"] = indices_tensor
             ret["params"] = params_tensor
