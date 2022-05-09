@@ -134,6 +134,8 @@ class TCP(Communication):
                 meta_len = len(
                     pickle.dumps(data["indices"])
                 )  # ONLY necessary for the statistics
+            else:
+                meta_len = 0
             if "params" in data:
                 data["params"] = self.compressor.compress_float(data["params"])
             output = pickle.dumps(data)

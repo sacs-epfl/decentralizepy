@@ -72,7 +72,6 @@ class SubSampling(Sharing):
         self.dict_ordered = dict_ordered
         self.save_shared = save_shared
         self.metadata_cap = metadata_cap
-        self.total_meta = 0
 
         # self.random_seed_generator = torch.Generator()
         # # Will use the random device if supported by CPU, else uses the system time
@@ -215,12 +214,6 @@ class SubSampling(Sharing):
             m["seed"] = seed
             m["alpha"] = alpha
             m["params"] = subsample.numpy()
-
-            # logging.info("Converted dictionary to json")
-            self.total_data += len(self.communication.encrypt(m["params"]))
-            self.total_meta += len(self.communication.encrypt(m["seed"])) + len(
-                self.communication.encrypt(m["alpha"])
-            )
 
             return m
 

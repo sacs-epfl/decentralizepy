@@ -68,7 +68,6 @@ class TopKParams(Sharing):
         self.dict_ordered = dict_ordered
         self.save_shared = save_shared
         self.metadata_cap = metadata_cap
-        self.total_meta = 0
 
         if self.save_shared:
             # Only save for 2 procs: Save space
@@ -171,10 +170,6 @@ class TopKParams(Sharing):
             #    m[key] = json.dumps(m[key])
 
             logging.info("Converted dictionary to json")
-            self.total_data += len(self.communication.encrypt(m["params"]))
-            self.total_meta += len(self.communication.encrypt(m["indices"])) + len(
-                self.communication.encrypt(m["offsets"])
-            )
 
             return m
 
