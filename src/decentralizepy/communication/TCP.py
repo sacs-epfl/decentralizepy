@@ -131,27 +131,23 @@ class TCP(Communication):
         if self.compress:
             if "indices" in data:
                 data["indices"] = self.compressor.compress(data["indices"])
-                meta_len = len(
-                    pickle.dumps(data["indices"])
-                )  # ONLY necessary for the statistics
-            else:
-                meta_len = 0
-            if "params" in data:
-                data["params"] = self.compressor.compress_float(data["params"])
+
+            assert "params" in data
+            data["params"] = self.compressor.compress_float(data["params"])
+            data_len = len(pickle.dumps(data["params"]))
             output = pickle.dumps(data)
+
             # the compressed meta data gets only a few bytes smaller after pickling
-            self.total_meta += meta_len
-            self.total_data += len(output) - meta_len
+            self.total_meta += len(output) - data_len
+            self.total_data += data_len
         else:
             output = pickle.dumps(data)
             # centralized testing uses its own instance
             if type(data) == dict:
-                if "indices" in data:
-                    meta_len = len(pickle.dumps(data["indices"]))
-                else:
-                    meta_len = 0
-                self.total_meta += meta_len
-                self.total_data += len(output) - meta_len
+                assert "params" in data
+                data_len = len(pickle.dumps(data["params"]))
+                self.total_meta += len(output) - data_len
+                self.total_data += data_len
         return output
 
     def decrypt(self, sender, data):

@@ -19,7 +19,7 @@ class RandomAlpha(Wavelet):
         model,
         dataset,
         log_dir,
-        alpha_list=[0.1, 0.2, 0.3, 0.4, 1.0],
+        alpha_list="[0.1, 0.2, 0.3, 0.4, 1.0]",
         dict_ordered=True,
         save_shared=False,
         metadata_cap=1.0,
