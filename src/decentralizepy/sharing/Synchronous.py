@@ -46,7 +46,6 @@ class Synchronous:
         self.dataset = dataset
         self.communication_round = 0
         self.log_dir = log_dir
-        self.total_data = 0
 
         self.peer_deques = dict()
         self.my_neighbors = self.graph.neighbors(self.uid)
@@ -104,7 +103,6 @@ class Synchronous:
         m = dict()
         for key, val in self.model.state_dict().items():
             m[key] = val - self.init_model[key]  # this is -lr*gradient
-        self.total_data += len(self.communication.encrypt(m))
         return m
 
     def serialized_model(self):
@@ -120,7 +118,6 @@ class Synchronous:
         m = dict()
         for key, val in self.model.state_dict().items():
             m[key] = val.clone().detach()
-        self.total_data += len(self.communication.encrypt(m))
         return m
 
     def deserialized_model(self, m):

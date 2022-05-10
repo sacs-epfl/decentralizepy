@@ -181,7 +181,6 @@ class Wavelet(PartialModel):
         if self.alpha >= self.metadata_cap:  # Share fully
             data = self.pre_share_model_transformed
             m["params"] = data.numpy()
-            self.total_data += len(self.communication.encrypt(m["params"]))
             if self.model.accumulated_changes is not None:
                 self.model.accumulated_changes = torch.zeros_like(
                     self.model.accumulated_changes

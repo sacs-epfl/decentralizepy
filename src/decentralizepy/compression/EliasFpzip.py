@@ -49,4 +49,4 @@ class EliasFpzip(Elias):
             decompressed data as array
 
         """
-        return fpzip.decompress(bytes, order="C")
+        return fpzip.decompress(bytes, order="C").squeeze()

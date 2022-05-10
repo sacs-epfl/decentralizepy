@@ -82,7 +82,6 @@ class PartialModel(Sharing):
         self.dict_ordered = dict_ordered
         self.save_shared = save_shared
         self.metadata_cap = metadata_cap
-        self.total_meta = 0
         self.accumulation = accumulation
         self.save_accumulated = conditional_value(save_accumulated, "", False)
         self.change_transformer = change_transformer

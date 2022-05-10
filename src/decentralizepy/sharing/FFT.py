@@ -159,7 +159,6 @@ class FFT(PartialModel):
         if self.alpha >= self.metadata_cap:  # Share fully
             data = self.pre_share_model_transformed
             m["params"] = data.numpy()
-            self.total_data += len(self.communication.encrypt(m["params"]))
             if self.model.accumulated_changes is not None:
                 self.model.accumulated_changes = torch.zeros_like(
                     self.model.accumulated_changes
@@ -199,11 +198,6 @@ class FFT(PartialModel):
             m["params"] = topk.numpy()
             m["indices"] = indices.numpy().astype(np.int32)
             m["send_partial"] = True
-
-            self.total_data += len(self.communication.encrypt(m["params"]))
-            self.total_meta += len(self.communication.encrypt(m["indices"])) + len(
-                self.communication.encrypt(m["alpha"])
-            )
 
         return m
 
