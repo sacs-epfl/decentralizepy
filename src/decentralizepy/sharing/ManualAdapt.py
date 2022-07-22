@@ -1,3 +1,4 @@
+# Deprecated
 import logging
 
 from decentralizepy.sharing.PartialModel import PartialModel
@@ -24,6 +25,9 @@ class ManualAdapt(PartialModel):
         dict_ordered=True,
         save_shared=False,
         metadata_cap=1.0,
+        compress=False,
+        compression_package=None,
+        compression_class=None,
     ):
         """
         Constructor
@@ -81,11 +85,14 @@ class ManualAdapt(PartialModel):
             dict_ordered,
             save_shared,
             metadata_cap,
+            compress,
+            compression_package,
+            compression_class,
         )
         self.change_alpha = change_alpha[1:]
         self.change_rounds = change_rounds
 
-    def step(self):
+    def get_data_to_send(self):
         """
         Perform a sharing step. Implements D-PSGD with alpha manually given.
 
@@ -101,6 +108,6 @@ class ManualAdapt(PartialModel):
         if self.alpha == 0.0:
             logging.info("Not sending/receiving data (alpha=0.0)")
             self.communication_round += 1
-            return
+            return dict()
 
-        super().step()
+        return super().get_data_to_send()

@@ -24,6 +24,9 @@ class LowerBoundTopK(PartialModel):
         log_dir,
         lower_bound=0.1,
         metro_hastings=True,
+        compress=False,
+        compression_package=None,
+        compression_class=None,
         **kwargs,
     ):
         """
@@ -81,7 +84,9 @@ class LowerBoundTopK(PartialModel):
             model,
             dataset,
             log_dir,
-            **kwargs,
+            compress,
+            compression_package,
+            compression_class**kwargs,
         )
         self.lower_bound = lower_bound
         self.metro_hastings = metro_hastings
@@ -154,6 +159,8 @@ class LowerBoundTopK(PartialModel):
         if "send_partial" not in m:
             return super().deserialized_model(m)
 
+        m = self.decompress_data(m)
+
         with torch.no_grad():
             state_dict = self.model.state_dict()
 
@@ -169,7 +176,7 @@ class LowerBoundTopK(PartialModel):
 
             return T, index_tensor
 
-    def _averaging(self):
+    def _averaging(self, peer_deques):
         """
         Averages the received model with the local model
 
@@ -187,8 +194,11 @@ class LowerBoundTopK(PartialModel):
                 weight_total = 0
                 weight_vector = torch.ones_like(self.init_model)
                 datas = []
-                for i, n in enumerate(self.peer_deques):
-                    degree, iteration, data = self.peer_deques[n].popleft()
+                for i, n in enumerate(peer_deques):
+                    data = peer_deques[n].popleft()
+                    degree, iteration = data["degree"], data["iteration"]
+                    del data["degree"]
+                    del data["iteration"]
                     logging.debug(
                         "Averaging model from neighbor {} of iteration {}".format(
                             n, iteration
@@ -215,3 +225,5 @@ class LowerBoundTopK(PartialModel):
 
             logging.info("new averaging")
             self.model.load_state_dict(total)
+            self._post_step()
+            self.communication_round += 1

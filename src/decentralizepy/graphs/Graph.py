@@ -22,6 +22,9 @@ class Graph:
             self.n_procs = n_procs
             self.adj_list = [set() for i in range(self.n_procs)]
 
+    def get_all_nodes(self):
+        return [i for i in range(self.n_procs)]
+
     def __insert_adj__(self, node, neighbours):
         """
         Inserts `neighbours` into the adjacency list of `node`

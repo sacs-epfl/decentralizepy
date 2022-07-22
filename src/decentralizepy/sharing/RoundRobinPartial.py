@@ -25,6 +25,9 @@ class RoundRobinPartial(Sharing):
         dataset,
         log_dir,
         alpha=1.0,
+        compress=False,
+        compression_package=None,
+        compression_class=None,
     ):
         """
         Constructor
@@ -52,7 +55,17 @@ class RoundRobinPartial(Sharing):
 
         """
         super().__init__(
-            rank, machine_id, communication, mapping, graph, model, dataset, log_dir
+            rank,
+            machine_id,
+            communication,
+            mapping,
+            graph,
+            model,
+            dataset,
+            log_dir,
+            compress,
+            compression_package,
+            compression_class,
         )
         self.alpha = alpha
         random.seed(self.mapping.get_uid(rank, machine_id))
@@ -104,7 +117,7 @@ class RoundRobinPartial(Sharing):
 
             logging.info("Converted dictionary to json")
             self.total_data += len(self.communication.encrypt(m["params"]))
-            return m
+            return self.compress_data(m)
 
     def deserialized_model(self, m):
         """
@@ -121,9 +134,9 @@ class RoundRobinPartial(Sharing):
             state_dict of received
 
         """
+        m = self.decompress_data(m)
         with torch.no_grad():
             state_dict = self.model.state_dict()
-
             shapes = []
             lens = []
             tensors_to_cat = []

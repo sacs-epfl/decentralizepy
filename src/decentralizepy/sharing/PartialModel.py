@@ -34,6 +34,9 @@ class PartialModel(Sharing):
         save_accumulated="",
         change_transformer=identity,
         accumulate_averaging_changes=False,
+        compress=False,
+        compression_package=None,
+        compression_class=None,
     ):
         """
         Constructor
@@ -76,7 +79,17 @@ class PartialModel(Sharing):
 
         """
         super().__init__(
-            rank, machine_id, communication, mapping, graph, model, dataset, log_dir
+            rank,
+            machine_id,
+            communication,
+            mapping,
+            graph,
+            model,
+            dataset,
+            log_dir,
+            compress,
+            compression_package,
+            compression_class,
         )
         self.alpha = alpha
         self.dict_ordered = dict_ordered
@@ -128,6 +141,23 @@ class PartialModel(Sharing):
         self.model.shared_parameters_counter = torch.zeros(
             self.change_transformer(self.init_model).shape[0], dtype=torch.int32
         )
+
+    def compress_data(self, data):
+        result = dict(data)
+        if self.compress:
+            if "indices" in result:
+                result["indices"] = self.compressor.compress(result["indices"])
+            if "params" in result:
+                result["params"] = self.compressor.compress_float(result["params"])
+        return result
+
+    def decompress_data(self, data):
+        if self.compress:
+            if "indices" in data:
+                data["indices"] = self.compressor.decompress(data["indices"])
+            if "params" in data:
+                data["params"] = self.compressor.decompress_float(data["params"])
+        return data
 
     def extract_top_gradients(self):
         """
@@ -220,7 +250,7 @@ class PartialModel(Sharing):
 
             logging.info("Converted dictionary to pickle")
 
-            return m
+            return self.compress_data(m)
 
     def deserialized_model(self, m):
         """
@@ -241,6 +271,8 @@ class PartialModel(Sharing):
             return super().deserialized_model(m)
 
         with torch.no_grad():
+            m = self.decompress_data(m)
+
             state_dict = self.model.state_dict()
 
             if not self.dict_ordered:

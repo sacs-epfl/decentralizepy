@@ -8,7 +8,7 @@ from torch import multiprocessing as mp
 from decentralizepy import utils
 from decentralizepy.graphs.Graph import Graph
 from decentralizepy.mappings.Linear import Linear
-from decentralizepy.node.Node import Node
+from decentralizepy.node.DPSGDNode import DPSGDNode
 
 
 def read_ini(file_path):
@@ -51,7 +51,7 @@ if __name__ == "__main__":
     m_id = args.machine_id
 
     mp.spawn(
-        fn=Node,
+        fn=DPSGDNode,
         nprocs=procs_per_machine,
         args=[
             m_id,

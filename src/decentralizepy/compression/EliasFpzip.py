@@ -1,7 +1,6 @@
 # elias implementation: taken from this stack overflow post:
 # https://stackoverflow.com/questions/62843156/python-fast-compression-of-large-amount-of-numbers-with-elias-gamma
 import fpzip
-import numpy as np
 
 from decentralizepy.compression.Elias import Elias
 

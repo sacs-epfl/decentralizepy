@@ -38,7 +38,7 @@ def plot(means, stdevs, mins, maxs, title, label, loc):
 
 def plot_results(path, centralized, data_machine="machine0", data_node=0):
     folders = os.listdir(path)
-    if centralized.lower() in ['true', '1', 't', 'y', 'yes']:
+    if centralized.lower() in ["true", "1", "t", "y", "yes"]:
         centralized = True
         print("Centralized")
     else:

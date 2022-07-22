@@ -1,8 +1,6 @@
 import json
 import logging
 import os
-from pathlib import Path
-from time import time
 
 import numpy as np
 import torch
@@ -53,6 +51,9 @@ class FFT(PartialModel):
         save_accumulated="",
         accumulation=True,
         accumulate_averaging_changes=False,
+        compress=False,
+        compression_package=None,
+        compression_class=None,
     ):
         """
         Constructor
@@ -111,6 +112,9 @@ class FFT(PartialModel):
             save_accumulated,
             change_transformer_fft,
             accumulate_averaging_changes,
+            compress,
+            compression_package,
+            compression_class,
         )
         self.change_based_selection = change_based_selection
 
@@ -163,7 +167,7 @@ class FFT(PartialModel):
                 self.model.accumulated_changes = torch.zeros_like(
                     self.model.accumulated_changes
                 )
-            return m
+            return self.compress_data(m)
 
         with torch.no_grad():
             topk, indices = self.apply_fft()
@@ -199,7 +203,7 @@ class FFT(PartialModel):
             m["indices"] = indices.numpy().astype(np.int32)
             m["send_partial"] = True
 
-        return m
+        return self.compress_data(m)
 
     def deserialized_model(self, m):
         """
@@ -216,6 +220,8 @@ class FFT(PartialModel):
             state_dict of received
 
         """
+        m = self.decompress_data(m)
+
         ret = dict()
         if "send_partial" not in m:
             params = m["params"]
@@ -237,7 +243,7 @@ class FFT(PartialModel):
             ret["send_partial"] = True
         return ret
 
-    def _averaging(self):
+    def _averaging(self, peer_deques):
         """
         Averages the received model with the local model
 
@@ -251,8 +257,11 @@ class FFT(PartialModel):
             pre_share_model = torch.cat(tensors_to_cat, dim=0)
             flat_fft = self.change_transformer(pre_share_model)
 
-            for i, n in enumerate(self.peer_deques):
-                degree, iteration, data = self.peer_deques[n].popleft()
+            for i, n in enumerate(peer_deques):
+                data = peer_deques[n].popleft()
+                degree, iteration = data["degree"], data["iteration"]
+                del data["degree"]
+                del data["iteration"]
                 logging.debug(
                     "Averaging model from neighbor {} of iteration {}".format(
                         n, iteration
@@ -268,7 +277,7 @@ class FFT(PartialModel):
                 else:
                     topkf = params
 
-                weight = 1 / (max(len(self.peer_deques), degree) + 1)  # Metro-Hastings
+                weight = 1 / (max(len(peer_deques), degree) + 1)  # Metro-Hastings
                 weight_total += weight
                 if total is None:
                     total = weight * topkf
@@ -289,3 +298,5 @@ class FFT(PartialModel):
                 start_index = end_index
 
         self.model.load_state_dict(std_dict)
+        self._post_step()
+        self.communication_round += 1

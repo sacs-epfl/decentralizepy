@@ -1,6 +1,3 @@
-import numpy as np
-
-
 class Compression:
     """
     Compression API

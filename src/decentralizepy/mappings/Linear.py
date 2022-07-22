@@ -8,7 +8,7 @@ class Linear(Mapping):
 
     """
 
-    def __init__(self, n_machines, procs_per_machine):
+    def __init__(self, n_machines, procs_per_machine, global_service_machine=0):
         """
         Constructor
 
@@ -23,6 +23,7 @@ class Linear(Mapping):
         super().__init__(n_machines * procs_per_machine)
         self.n_machines = n_machines
         self.procs_per_machine = procs_per_machine
+        self.global_service_machine = global_service_machine
 
     def get_uid(self, rank: int, machine_id: int):
         """
@@ -41,6 +42,8 @@ class Linear(Mapping):
             the unique identifier
 
         """
+        if rank < 0:
+            return rank
         return machine_id * self.procs_per_machine + rank
 
     def get_machine_and_rank(self, uid: int):
@@ -58,6 +61,8 @@ class Linear(Mapping):
             a tuple of rank and machine_id
 
         """
+        if uid < 0:
+            return uid, self.global_service_machine
         return (uid % self.procs_per_machine), (uid // self.procs_per_machine)
 
     def get_local_procs_count(self):

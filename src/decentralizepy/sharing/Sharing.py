@@ -1,5 +1,5 @@
+import importlib
 import logging
-from collections import deque
 
 import torch
 
@@ -11,7 +11,18 @@ class Sharing:
     """
 
     def __init__(
-        self, rank, machine_id, communication, mapping, graph, model, dataset, log_dir
+        self,
+        rank,
+        machine_id,
+        communication,
+        mapping,
+        graph,
+        model,
+        dataset,
+        log_dir,
+        compress=False,
+        compression_package=None,
+        compression_class=None,
     ):
         """
         Constructor
@@ -47,11 +58,6 @@ class Sharing:
         self.communication_round = 0
         self.log_dir = log_dir
 
-        self.peer_deques = dict()
-        self.my_neighbors = self.graph.neighbors(self.uid)
-        for n in self.my_neighbors:
-            self.peer_deques[n] = deque()
-
         self.shapes = []
         self.lens = []
         with torch.no_grad():
@@ -60,38 +66,28 @@ class Sharing:
                 t = v.flatten().numpy()
                 self.lens.append(t.shape[0])
 
-    def received_from_all(self):
-        """
-        Check if all neighbors have sent the current iteration
+        self.compress = compress
 
-        Returns
-        -------
-        bool
-            True if required data has been received, False otherwise
+        if compression_package and compression_class:
+            compressor_module = importlib.import_module(compression_package)
+            compressor_class = getattr(compressor_module, compression_class)
+            self.compressor = compressor_class()
+            logging.info(f"Using the {compressor_class} to compress the data")
+        else:
+            assert not self.compress
 
-        """
-        for _, i in self.peer_deques.items():
-            if len(i) == 0:
-                return False
-        return True
+    def compress_data(self, data):
+        result = dict(data)
+        if self.compress:
+            if "params" in result:
+                result["params"] = self.compressor.compress_float(result["params"])
+        return result
 
-    def get_neighbors(self, neighbors):
-        """
-        Choose which neighbors to share with
-
-        Parameters
-        ----------
-        neighbors : list(int)
-            List of all neighbors
-
-        Returns
-        -------
-        list(int)
-            Neighbors to share with
-
-        """
-        # modify neighbors here
-        return neighbors
+    def decompress_data(self, data):
+        if self.compress:
+            if "params" in data:
+                data["params"] = self.compressor.decompress_float(data["params"])
+        return data
 
     def serialized_model(self):
         """
@@ -111,7 +107,7 @@ class Sharing:
         flat = torch.cat(to_cat)
         data = dict()
         data["params"] = flat.numpy()
-        return data
+        return self.compress_data(data)
 
     def deserialized_model(self, m):
         """
@@ -129,11 +125,14 @@ class Sharing:
 
         """
         state_dict = dict()
+        m = self.decompress_data(m)
         T = m["params"]
         start_index = 0
         for i, key in enumerate(self.model.state_dict()):
             end_index = start_index + self.lens[i]
-            state_dict[key] = torch.from_numpy(T[start_index:end_index].reshape(self.shapes[i]))
+            state_dict[key] = torch.from_numpy(
+                T[start_index:end_index].reshape(self.shapes[i])
+            )
             start_index = end_index
 
         return state_dict
@@ -152,7 +151,7 @@ class Sharing:
         """
         pass
 
-    def _averaging(self):
+    def _averaging(self, peer_deques):
         """
         Averages the received model with the local model
 
@@ -160,15 +159,18 @@ class Sharing:
         with torch.no_grad():
             total = dict()
             weight_total = 0
-            for i, n in enumerate(self.peer_deques):
-                degree, iteration, data = self.peer_deques[n].popleft()
+            for i, n in enumerate(peer_deques):
+                data = peer_deques[n].popleft()
+                degree, iteration = data["degree"], data["iteration"]
+                del data["degree"]
+                del data["iteration"]
                 logging.debug(
                     "Averaging model from neighbor {} of iteration {}".format(
                         n, iteration
                     )
                 )
                 data = self.deserialized_model(data)
-                weight = 1 / (max(len(self.peer_deques), degree) + 1)  # Metro-Hastings
+                weight = 1 / (max(len(peer_deques), degree) + 1)  # Metro-Hastings
                 weight_total += weight
                 for key, value in data.items():
                     if key in total:
@@ -180,41 +182,14 @@ class Sharing:
                 total[key] += (1 - weight_total) * value  # Metro-Hastings
 
         self.model.load_state_dict(total)
+        self._post_step()
+        self.communication_round += 1
 
-    def step(self):
-        """
-        Perform a sharing step. Implements D-PSGD.
-
-        """
+    def get_data_to_send(self):
         self._pre_step()
         data = self.serialized_model()
         my_uid = self.mapping.get_uid(self.rank, self.machine_id)
         all_neighbors = self.graph.neighbors(my_uid)
-        iter_neighbors = self.get_neighbors(all_neighbors)
         data["degree"] = len(all_neighbors)
         data["iteration"] = self.communication_round
-        encrypted = self.communication.encrypt(data)
-        for neighbor in iter_neighbors:
-            self.communication.send(neighbor, encrypted, encrypt=False)
-
-        logging.info("Waiting for messages from neighbors")
-        while not self.received_from_all():
-            sender, data = self.communication.receive()
-            logging.debug("Received model from {}".format(sender))
-            degree = data["degree"]
-            iteration = data["iteration"]
-            del data["degree"]
-            del data["iteration"]
-            self.peer_deques[sender].append((degree, iteration, data))
-            logging.info(
-                "Deserialized received model from {} of iteration {}".format(
-                    sender, iteration
-                )
-            )
-
-        logging.info("Starting model averaging after receiving from all neighbors")
-        self._averaging()
-        logging.info("Model averaging complete")
-
-        self.communication_round += 1
-        self._post_step()
+        return data

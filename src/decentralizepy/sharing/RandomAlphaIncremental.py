@@ -1,3 +1,4 @@
+# Deprecated
 import random
 
 from decentralizepy.sharing.PartialModel import PartialModel
@@ -24,6 +25,9 @@ class RandomAlphaIncremental(PartialModel):
         metadata_cap=1.0,
         range_start=0.1,
         range_end=0.2,
+        compress=False,
+        compression_package=None,
+        compression_class=None,
     ):
         """
         Constructor
@@ -67,16 +71,19 @@ class RandomAlphaIncremental(PartialModel):
             dict_ordered,
             save_shared,
             metadata_cap,
+            compress,
+            compression_package,
+            compression_class,
         )
         random.seed(self.mapping.get_uid(self.rank, self.machine_id))
         self.range_start = range_start
         self.range_end = range_end
 
-    def step(self):
+    def get_data_to_send(self):
         """
         Perform a sharing step. Implements D-PSGD with alpha randomly chosen from an increasing range.
 
         """
         self.alpha = round(random.uniform(self.range_start, self.range_end), 2)
         self.range_end = min(1.0, self.range_end + round(random.uniform(0.0, 0.1), 2))
-        super().step()
+        return super().get_data_to_send()
