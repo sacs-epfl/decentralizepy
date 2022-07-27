@@ -199,6 +199,7 @@ class LowerBoundTopK(PartialModel):
                     degree, iteration = data["degree"], data["iteration"]
                     del data["degree"]
                     del data["iteration"]
+                    del data["CHANNEL"]
                     logging.debug(
                         "Averaging model from neighbor {} of iteration {}".format(
                             n, iteration

@@ -49,6 +49,17 @@ class DPSGDNode(Node):
         plt.title(title)
         plt.savefig(filename)
 
+    def get_neighbors(self, node=None):
+        return self.my_neighbors
+
+    # def instantiate_peer_deques(self):
+    #     for neighbor in self.my_neighbors:
+    #         if neighbor not in self.peer_deques:
+    #             self.peer_deques[neighbor] = deque()
+
+    def receive_DPSGD(self):
+        return self.receive_channel("DPSGD")
+
     def run(self):
         """
         Start the decentralized learning
@@ -90,28 +101,47 @@ class DPSGDNode(Node):
 
         for iteration in range(self.iterations):
             logging.info("Starting training iteration: %d", iteration)
+            self.iteration = iteration
             self.trainer.train(self.dataset)
+
+            new_neighbors = self.get_neighbors()
+
+            # for neighbor in self.my_neighbors:
+            #     if neighbor not in new_neighbors:
+            #         logging.info("Removing neighbor {}".format(neighbor))
+            #         if neighbor in self.peer_deques:
+            #             assert len(self.peer_deques[neighbor]) == 0
+            #             del self.peer_deques[neighbor]
+            #         self.communication.destroy_connection(neighbor, linger = 10000)
+            #         self.barrier.remove(neighbor)
+
+            self.my_neighbors = new_neighbors
+            self.connect_neighbors()
+            logging.info("Connected to all neighbors")
+            # self.instantiate_peer_deques()
+
             to_send = self.sharing.get_data_to_send()
+            to_send["CHANNEL"] = "DPSGD"
 
             for neighbor in self.my_neighbors:
                 self.communication.send(neighbor, to_send)
 
             while not self.received_from_all():
-                sender, data = self.receive()
-
-                if "HELLO" in data:
-                    logging.critical(
-                        "Received unexpected {} from {}".format("HELLO", sender)
+                sender, data = self.receive_DPSGD()
+                logging.info(
+                    "Received Model from {} of iteration {}".format(
+                        sender, data["iteration"]
                     )
-                    raise RuntimeError("A neighbour wants to connect during training!")
-                elif "BYE" in data:
-                    logging.debug("Received {} from {}".format("BYE", sender))
-                    self.barrier.remove(sender)
-                else:
-                    logging.debug("Received message from {}".format(sender))
-                    self.peer_deques[sender].append(data)
+                )
+                if sender not in self.peer_deques:
+                    self.peer_deques[sender] = deque()
+                self.peer_deques[sender].append(data)
 
-            self.sharing._averaging(self.peer_deques)
+            averaging_deque = dict()
+            for neighbor in self.my_neighbors:
+                averaging_deque[neighbor] = self.peer_deques[neighbor]
+
+            self.sharing._averaging(averaging_deque)
 
             if self.reset_optimizer:
                 self.optimizer = self.optimizer_class(
@@ -385,16 +415,15 @@ class DPSGDNode(Node):
         self.init_trainer(config["TRAIN_PARAMS"])
         self.init_comm(config["COMMUNICATION"])
 
-        self.message_queue = deque()
+        self.message_queue = dict()
+
         self.barrier = set()
         self.my_neighbors = self.graph.neighbors(self.uid)
 
         self.init_sharing(config["SHARING"])
         self.peer_deques = dict()
-        for n in self.my_neighbors:
-            self.peer_deques[n] = deque()
-
         self.connect_neighbors()
+        # self.instantiate_peer_deques()
 
     def received_from_all(self):
         """
@@ -407,7 +436,7 @@ class DPSGDNode(Node):
 
         """
         for k in self.my_neighbors:
-            if len(self.peer_deques[k]) == 0:
+            if (k not in self.peer_deques) or len(self.peer_deques[k]) == 0:
                 return False
         return True
 

@@ -1,5 +1,6 @@
 import importlib
 import logging
+import os
 from collections import deque
 
 from decentralizepy import utils
@@ -13,6 +14,30 @@ class PeerSampler(Node):
     This class defines the peer sampling service
 
     """
+
+    def init_log(self, log_dir, log_level, force=True):
+        """
+        Instantiate Logging.
+
+        Parameters
+        ----------
+        log_dir : str
+            Logging directory
+        rank : rank : int
+            Rank of process local to the machine
+        log_level : logging.Level
+            One of DEBUG, INFO, WARNING, ERROR, CRITICAL
+        force : bool
+            Argument to logging.basicConfig()
+
+        """
+        log_file = os.path.join(log_dir, "PeerSampler.log")
+        logging.basicConfig(
+            filename=log_file,
+            format="[%(asctime)s][%(module)s][%(levelname)s] %(message)s",
+            level=log_level,
+            force=force,
+        )
 
     def cache_fields(
         self,
@@ -123,12 +148,19 @@ class PeerSampler(Node):
             log_dir,
         )
 
-        self.message_queue = deque()
+        self.message_queue = dict()
+
         self.barrier = set()
 
         self.init_comm(config["COMMUNICATION"])
         self.my_neighbors = self.graph.get_all_nodes()
-        self.connect_neighbours()
+        self.connect_neighbors()
+
+    def get_neighbors(self, node, iteration=None):
+        return self.graph.neighbors(node)
+
+    def receive_server_request(self):
+        return self.receive_channel("SERVER_REQUEST")
 
     def run(self):
         """
@@ -136,13 +168,20 @@ class PeerSampler(Node):
 
         """
         while len(self.barrier) > 0:
-            sender, data = self.receive()
+            sender, data = self.receive_server_request()
             if "BYE" in data:
                 logging.debug("Received {} from {}".format("BYE", sender))
                 self.barrier.remove(sender)
-            else:
+
+            elif "REQUEST_NEIGHBORS" in data:
                 logging.debug("Received {} from {}".format("Request", sender))
-                resp = {"neighbors": self.get_neighbors(sender)}
+                if "iteration" in data:
+                    resp = {
+                        "NEIGHBORS": self.get_neighbors(sender, data["iteration"]),
+                        "CHANNEL": "PEERS",
+                    }
+                else:
+                    resp = {"NEIGHBORS": self.get_neighbors(sender), "CHANNEL": "PEERS"}
                 self.communication.send(sender, resp)
 
     def __init__(

@@ -24,7 +24,36 @@ class Node:
         """
         logging.info("Sending connection request to {}".format(neighbor))
         self.communication.init_connection(neighbor)
-        self.communication.send(neighbor, {"HELLO": self.uid})
+        self.communication.send(neighbor, {"HELLO": self.uid, "CHANNEL": "CONNECT"})
+
+    def receive_channel(self, channel):
+        if channel not in self.message_queue:
+            self.message_queue[channel] = deque()
+
+        if len(self.message_queue[channel]) > 0:
+            return self.message_queue[channel].popleft()
+        else:
+            sender, recv = self.communication.receive()
+            logging.info(
+                "Received some message from {} with CHANNEL: {}".format(
+                    sender, recv["CHANNEL"]
+                )
+            )
+            assert "CHANNEL" in recv
+            while recv["CHANNEL"] != channel:
+                if recv["CHANNEL"] not in self.message_queue:
+                    self.message_queue[recv["CHANNEL"]] = deque()
+                self.message_queue[recv["CHANNEL"]].append((sender, recv))
+                sender, recv = self.communication.receive()
+                logging.info(
+                    "Received some message from {} with CHANNEL: {}".format(
+                        sender, recv["CHANNEL"]
+                    )
+                )
+            return (sender, recv)
+
+    def receive_hello(self):
+        return self.receive_channel("CONNECT")
 
     def wait_for_hello(self, neighbor):
         """
@@ -37,30 +66,11 @@ class Node:
             If received BYE while waiting for HELLO
 
         """
-
         while neighbor not in self.barrier:
-            sender, recv = self.communication.receive()
-
-            if "HELLO" in recv:
-                logging.debug("Received {} from {}".format("HELLO", sender))
-                self.barrier.add(sender)
-            elif "BYE" in recv:
-                logging.debug("Received {} from {}".format("BYE", sender))
-                raise RuntimeError(
-                    "A neighbour wants to disconnect before training started!"
-                )
-            else:
-                logging.debug(
-                    "Received message from {} @ connect_neighbors".format(sender)
-                )
-                self.message_queue.append((sender, recv))
-
-    def receive(self):
-        if len(self.message_queue) > 0:
-            resp = self.message_queue.popleft()
-        else:
-            resp = self.communication.receive()
-        return resp
+            logging.info("Waiting HELLO from {}".format(neighbor))
+            sender, _ = self.receive_hello()
+            logging.info("Received HELLO from {}".format(sender))
+            self.barrier.add(sender)
 
     def connect_neighbors(self):
         """
@@ -74,11 +84,17 @@ class Node:
 
         """
         logging.info("Sending connection request to all neighbors")
+        wait_acknowledgements = []
         for neighbor in self.my_neighbors:
-            self.connect_neighbor(neighbor)
+            if not self.communication.already_connected(neighbor):
+                self.connect_neighbor(neighbor)
+                wait_acknowledgements.append(neighbor)
 
-        for neighbor in self.my_neighbors:
+        for neighbor in wait_acknowledgements:
             self.wait_for_hello(neighbor)
+
+    def receive_disconnect(self):
+        return self.receive_channel("DISCONNECT")
 
     def disconnect_neighbors(self):
         """
@@ -93,20 +109,11 @@ class Node:
         if not self.sent_disconnections:
             logging.info("Disconnecting neighbors")
             for uid in self.my_neighbors:
-                self.communication.send(uid, {"BYE": self.uid})
+                self.communication.send(uid, {"BYE": self.uid, "CHANNEL": "DISCONNECT"})
             self.sent_disconnections = True
             while len(self.barrier):
-                sender, recv = self.receive()
-                if "BYE" in recv:
-                    logging.debug("Received {} from {}".format("BYE", sender))
-                    self.barrier.remove(sender)
-                else:
-                    logging.critical(
-                        "Received unexpected {} from {}".format(recv, sender)
-                    )
-                    raise RuntimeError(
-                        "Received a message when expecting BYE from {}".format(sender)
-                    )
+                sender, _ = self.receive_disconnect()
+                self.barrier.remove(sender)
 
     def init_log(self, log_dir, rank, log_level, force=True):
         """
@@ -364,7 +371,8 @@ class Node:
         self.init_trainer(config["TRAIN_PARAMS"])
         self.init_comm(config["COMMUNICATION"])
 
-        self.message_queue = deque()
+        self.message_queue = dict()
+
         self.barrier = set()
         self.my_neighbors = self.graph.neighbors(self.uid)
 

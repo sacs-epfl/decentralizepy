@@ -160,6 +160,16 @@ class TCP(Communication):
         req.connect(self.addr(*self.mapping.get_machine_and_rank(neighbor)))
         self.peer_sockets[id] = req
 
+    def destroy_connection(self, neighbor, linger=None):
+        id = str(neighbor).encode()
+        if self.already_connected(neighbor):
+            self.peer_sockets[id].close(linger=linger)
+            del self.peer_sockets[id]
+
+    def already_connected(self, neighbor):
+        id = str(neighbor).encode()
+        return id in self.peer_sockets
+
     def receive(self):
         """
         Returns ONE message received.
@@ -177,7 +187,8 @@ class TCP(Communication):
         """
 
         sender, recv = self.router.recv_multipart()
-        return self.decrypt(sender, recv)
+        s, r = self.decrypt(sender, recv)
+        return s, r
 
     def send(self, uid, data, encrypt=True):
         """

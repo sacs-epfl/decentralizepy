@@ -84,7 +84,9 @@ def get_args():
     parser.add_argument("-tea", "--train_evaluate_after", type=int, default=1)
     parser.add_argument("-ro", "--reset_optimizer", type=int, default=1)
     parser.add_argument("-ctr", "--centralized_train_eval", type=int, default=0)
-    parser.add_argument("-cte", "--centralized_test_eval", type=int, default=1)
+    parser.add_argument("-cte", "--centralized_test_eval", type=int, default=0)
+    parser.add_argument("-sm", "--server_machine", type=int, default=0)
+    parser.add_argument("-sr", "--server_rank", type=int, default=-1)
 
     args = parser.parse_args()
     return args
