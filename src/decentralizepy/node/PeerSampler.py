@@ -258,3 +258,5 @@ class PeerSampler(Node):
         )
 
         self.run()
+
+        logging.info("Peer Sampler exiting")

@@ -29,10 +29,11 @@ def get_stats(l):
 def plot(means, stdevs, mins, maxs, title, label, loc):
     plt.title(title)
     plt.xlabel("communication rounds")
-    x_axis = list(means.keys())
-    y_axis = list(means.values())
-    err = list(stdevs.values())
-    plt.errorbar(x_axis, y_axis, yerr=err, label=label)
+    x_axis = np.array(list(means.keys()))
+    y_axis = np.array(list(means.values()))
+    err = np.array(list(stdevs.values()))
+    plt.plot(x_axis, y_axis, label=label)
+    plt.fill_between(x_axis, y_axis - err, y_axis + err, alpha=0.4)
     plt.legend(loc=loc)
 
 

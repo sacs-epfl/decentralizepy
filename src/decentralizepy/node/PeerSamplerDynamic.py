@@ -96,3 +96,5 @@ class PeerSamplerDynamic(PeerSampler):
         )
 
         self.run()
+
+        logging.info("Peer Sampler exiting")
