@@ -1,17 +1,18 @@
 #!/bin/bash
 
-decpy_path=/mnt/nfs/risharma/Gitlab/decentralizepy/eval
+decpy_path=/mnt/nfs/kirsten/Gitlab/jac_decentralizepy/decentralizepy/eval
 cd $decpy_path
 
 env_python=~/miniconda3/envs/decpy/bin/python3
-graph=/mnt/nfs/risharma/Gitlab/tutorial/regular_16.txt
-original_config=/mnt/nfs/risharma/Gitlab/tutorial/config_celeba_sharing.ini
-config_file=~/tmp/config.ini
+graph=/mnt/nfs/kirsten/Gitlab/tutorial/regular_16.txt
+original_config=/mnt/nfs/kirsten/Gitlab/tutorial/config_celeba_sharing.ini
+config_file=~/tmp/config_celeba_sharing.ini
 procs_per_machine=8
 machines=2
 iterations=5
 test_after=2
-eval_file=testing.py
+eval_file=testingFederated.py
+#eval_file=testingPeerSampler.py
 log_level=INFO
 
 m=`cat $(grep addresses_filepath $original_config | awk '{print $3}') | grep $(/sbin/ifconfig ens785 | grep 'inet ' | awk '{print $2}') | cut -d'"' -f2`

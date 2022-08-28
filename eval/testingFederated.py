@@ -8,11 +8,8 @@ from torch import multiprocessing as mp
 from decentralizepy import utils
 from decentralizepy.graphs.Graph import Graph
 from decentralizepy.mappings.Linear import Linear
-from decentralizepy.node.DPSGDWithPeerSampler import DPSGDWithPeerSampler
-from decentralizepy.node.PeerSamplerDynamic import PeerSamplerDynamic
-from decentralizepy.node.PeerSampler import PeerSampler
-from decentralizepy.node.ParameterServer import ParameterServer
-from decentralizepy.node.DPSGDNodeWithParameterServer import DPSGDNodeWithParameterServer
+from decentralizepy.node.FederatedParameterServer import FederatedParameterServer
+from decentralizepy.node.DPSGDNodeFederated import DPSGDNodeFederated
 
 
 def read_ini(file_path):
@@ -57,13 +54,14 @@ if __name__ == "__main__":
     sm = args.server_machine
     sr = args.server_rank
 
+    # TODO
+    working_fraction = 1.0
+
     processes = []
     if sm == m_id:
         processes.append(
             mp.Process(
-                # target=PeerSamplerDynamic,
-                target=ParameterServer,
-                # target=PeerSampler,
+                target=FederatedParameterServer,
                 args=[
                     sr,
                     m_id,
@@ -72,7 +70,11 @@ if __name__ == "__main__":
                     my_config,
                     args.iterations,
                     args.log_dir,
+                    args.weights_store_dir,
                     log_level[args.log_level],
+                    args.test_after,
+                    args.train_evaluate_after,
+                    working_fraction,
                 ],
             )
         )
@@ -80,8 +82,7 @@ if __name__ == "__main__":
     for r in range(0, procs_per_machine):
         processes.append(
             mp.Process(
-                target=DPSGDNodeWithParameterServer,
-                # target=DPSGDWithPeerSampler,
+                target=DPSGDNodeFederated,
                 args=[
                     r,
                     m_id,
@@ -95,8 +96,6 @@ if __name__ == "__main__":
                     args.test_after,
                     args.train_evaluate_after,
                     args.reset_optimizer,
-                    args.centralized_train_eval,
-                    args.centralized_test_eval,
                 ],
             )
         )

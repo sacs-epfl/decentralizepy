@@ -67,7 +67,10 @@ def plot_results(path, centralized, data_machine="machine0", data_node=0):
                 filepath = os.path.join(mf_path, f)
                 with open(filepath, "r") as inf:
                     results.append(json.load(inf))
-
+        if folder.startswith("FL"):
+            data_node = -1
+        else:
+            data_node = 0
         with open(folder_path / data_machine / f"{data_node}_results.json", "r") as f:
             main_data = json.load(f)
         main_data = [main_data]
@@ -258,5 +261,6 @@ if __name__ == "__main__":
     # The args are:
     # 1: the folder with the data
     # 2: True/False: If True then the evaluation on the test set was centralized
+    # for federated learning folder name must start with "FL"!
     plot_results(sys.argv[1], sys.argv[2])
     # plot_parameters(sys.argv[1])
