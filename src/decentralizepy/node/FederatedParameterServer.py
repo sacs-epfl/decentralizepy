@@ -285,9 +285,7 @@ class FederatedParameterServer(Node):
             self.current_workers = self.get_working_nodes()
 
             # Params to send to workers
-            # if this is the first iteration, use the init parameters, else use averaged params from last iteration
-            if iteration == 0:
-                to_send = self.sharing.get_data_to_send()
+            to_send = self.model.state_dict()
 
             to_send["CHANNEL"] = "WORKER_REQUEST"
             to_send["iteration"] = iteration
@@ -309,28 +307,11 @@ class FederatedParameterServer(Node):
 
             # Average received updates
             averaging_deque = dict()
-            total = dict()
             for worker in self.current_workers:
                 averaging_deque[worker] = self.peer_deques[worker]
 
-            for i, n in enumerate(averaging_deque):
-                data = averaging_deque[n].popleft()
-                del data["degree"]
-                del data["iteration"]
-                del data["CHANNEL"]
-                data = self.sharing.deserialized_model(data)
-                for key, value in data.items():
-                    if key in total:
-                        total[key] += value
-                    else:
-                        total[key] = value
-
-            for key, value in total.items():
-                total[key] = total[key] / len(averaging_deque)
-
-            self.model.load_state_dict(total)
-
-            to_send = total
+            self.sharing._pre_step()
+            self.sharing._averaging_server(averaging_deque)
 
             if iteration:
                 with open(

@@ -35,10 +35,6 @@ class DPSGDNodeFederated(Node):
             del data["iteration"]
             del data["CHANNEL"]
 
-            if iteration == 0:
-                del data["degree"]
-                data = self.sharing.deserialized_model(data)
-
             self.model.load_state_dict(data)
             self.sharing._post_step()
             self.sharing.communication_round += 1

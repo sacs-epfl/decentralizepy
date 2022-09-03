@@ -80,13 +80,15 @@ class Sharing:
         result = dict(data)
         if self.compress:
             if "params" in result:
-                result["params"] = self.compressor.compress_float(result["params"])
+                result["params"] = self.compressor.compress_float(
+                    result["params"])
         return result
 
     def decompress_data(self, data):
         if self.compress:
             if "params" in data:
-                data["params"] = self.compressor.decompress_float(data["params"])
+                data["params"] = self.compressor.decompress_float(
+                    data["params"])
         return data
 
     def serialized_model(self):
@@ -171,7 +173,8 @@ class Sharing:
                     )
                 )
                 data = self.deserialized_model(data)
-                weight = 1 / (max(len(peer_deques), degree) + 1)  # Metro-Hastings
+                # Metro-Hastings
+                weight = 1 / (max(len(peer_deques), degree) + 1)
                 weight_total += weight
                 for key, value in data.items():
                     if key in total:
@@ -194,3 +197,34 @@ class Sharing:
         data["degree"] = len(all_neighbors)
         data["iteration"] = self.communication_round
         return data
+
+    def _averaging_server(self, peer_deques):
+        """
+        Averages the received models of all working nodes
+
+        """
+        with torch.no_grad():
+            total = dict()
+            for i, n in enumerate(peer_deques):
+                data = peer_deques[n].popleft()
+                degree, iteration = data["degree"], data["iteration"]
+                del data["degree"]
+                del data["iteration"]
+                del data["CHANNEL"]
+                logging.debug(
+                    "Averaging model from neighbor {} of iteration {}".format(
+                        n, iteration
+                    )
+                )
+                data = self.deserialized_model(data)
+                weight = 1 / len(peer_deques)
+                for key, value in data.items():
+                    if key in total:
+                        total[key] += weight * value
+                    else:
+                        total[key] = weight * value
+
+        self.model.load_state_dict(total)
+        self._post_step()
+        self.communication_round += 1
+        return total

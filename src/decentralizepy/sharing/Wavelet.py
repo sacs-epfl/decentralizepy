@@ -134,7 +134,8 @@ class Wavelet(PartialModel):
         self.change_based_selection = change_based_selection
 
         # Do a dummy transform to get the shape and coefficents slices
-        coeff = pywt.wavedec(self.init_model.numpy(), self.wavelet, level=self.level)
+        coeff = pywt.wavedec(self.init_model.numpy(),
+                             self.wavelet, level=self.level)
         data, coeff_slices = pywt.coeffs_to_array(coeff)
         self.wt_shape = data.shape
         self.coeff_slices = coeff_slices
@@ -203,14 +204,16 @@ class Wavelet(PartialModel):
                     shapes[k] = list(v.shape)
                 shared_params["shapes"] = shapes
 
-                shared_params[self.communication_round] = indices.tolist()  # is slow
+                # is slow
+                shared_params[self.communication_round] = indices.tolist()
 
                 shared_params["alpha"] = self.alpha
 
                 with open(
                     os.path.join(
                         self.folder_path,
-                        "{}_shared_params.json".format(self.communication_round + 1),
+                        "{}_shared_params.json".format(
+                            self.communication_round + 1),
                     ),
                     "w",
                 ) as of:
@@ -296,7 +299,8 @@ class Wavelet(PartialModel):
                 else:
                     topkwf = params.reshape(self.wt_shape)
 
-                weight = 1 / (max(len(peer_deques), degree) + 1)  # Metro-Hastings
+                # Metro-Hastings
+                weight = 1 / (max(len(peer_deques), degree) + 1)
                 weight_total += weight
                 if total is None:
                     total = weight * topkwf
@@ -305,6 +309,62 @@ class Wavelet(PartialModel):
 
             # Metro-Hastings
             total += (1 - weight_total) * wt_params
+
+            avg_wf_params = pywt.array_to_coeffs(
+                total.numpy(), self.coeff_slices, output_format="wavedec"
+            )
+            reverse_total = torch.from_numpy(
+                pywt.waverec(avg_wf_params, wavelet=self.wavelet)
+            )
+
+            start_index = 0
+            std_dict = {}
+            for i, key in enumerate(self.model.state_dict()):
+                end_index = start_index + self.lens[i]
+                std_dict[key] = reverse_total[start_index:end_index].reshape(
+                    self.shapes[i]
+                )
+                start_index = end_index
+
+        self.model.load_state_dict(std_dict)
+        self._post_step()
+        self.communication_round += 1
+
+    def _averaging_server(self, peer_deques):
+        """
+        Averages the received models of all working nodes
+
+        """
+        with torch.no_grad():
+            total = None
+            wt_params = self.pre_share_model_transformed
+            for i, n in enumerate(peer_deques):
+                data = peer_deques[n].popleft()
+                degree, iteration = data["degree"], data["iteration"]
+                del data["degree"]
+                del data["iteration"]
+                del data["CHANNEL"]
+                logging.debug(
+                    "Averaging model from neighbor {} of iteration {}".format(
+                        n, iteration
+                    )
+                )
+                data = self.deserialized_model(data)
+                params = data["params"]
+                if "indices" in data:
+                    indices = data["indices"]
+                    # use local data to complement
+                    topkwf = wt_params.clone().detach()
+                    topkwf[indices] = params
+                    topkwf = topkwf.reshape(self.wt_shape)
+                else:
+                    topkwf = params.reshape(self.wt_shape)
+
+                weight = 1 / len(peer_deques)
+                if total is None:
+                    total = weight * topkwf
+                else:
+                    total += weight * topkwf
 
             avg_wf_params = pywt.array_to_coeffs(
                 total.numpy(), self.coeff_slices, output_format="wavedec"
