@@ -1,4 +1,5 @@
 import importlib
+import json
 import logging
 import math
 import os
@@ -35,7 +36,7 @@ class DPSGDNodeFederated(Node):
             del data["iteration"]
             del data["CHANNEL"]
 
-            self.model.load_state_dict(data)
+            self.model.load_state_dict(data["params"])
             self.sharing._post_step()
             self.sharing.communication_round += 1
 
@@ -59,6 +60,47 @@ class DPSGDNodeFederated(Node):
             to_send = self.sharing.get_data_to_send()
             to_send["CHANNEL"] = "DPSGD"
             self.communication.send(self.parameter_server_uid, to_send)
+
+            if self.participated > 0:
+                with open(
+                    os.path.join(
+                        self.log_dir, "{}_results.json".format(self.rank)),
+                    "r",
+                ) as inf:
+                    results_dict = json.load(inf)
+            else:
+                results_dict = {
+                    "train_loss": {},
+                    "test_loss": {},
+                    "test_acc": {},
+                    "total_bytes": {},
+                    "total_meta": {},
+                    "total_data_per_n": {},
+                    "grad_mean": {},
+                    "grad_std": {},
+                }
+
+            results_dict["total_bytes"][iteration
+                                        + 1] = self.communication.total_bytes
+
+            if hasattr(self.communication, "total_meta"):
+                results_dict["total_meta"][
+                    iteration + 1
+                ] = self.communication.total_meta
+            if hasattr(self.communication, "total_data"):
+                results_dict["total_data_per_n"][
+                    iteration + 1
+                ] = self.communication.total_data
+            if hasattr(self.sharing, "mean"):
+                results_dict["grad_mean"][iteration + 1] = self.sharing.mean
+            if hasattr(self.sharing, "std"):
+                results_dict["grad_std"][iteration + 1] = self.sharing.std
+            
+            with open(
+                os.path.join(
+                    self.log_dir, "{}_results.json".format(self.rank)), "w"
+            ) as of:
+                json.dump(results_dict, of)
 
             self.participated += 1
 

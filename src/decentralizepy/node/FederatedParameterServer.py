@@ -285,8 +285,7 @@ class FederatedParameterServer(Node):
             self.current_workers = self.get_working_nodes()
 
             # Params to send to workers
-            to_send = self.model.state_dict()
-
+            to_send["params"] = self.model.state_dict()
             to_send["CHANNEL"] = "WORKER_REQUEST"
             to_send["iteration"] = iteration
 

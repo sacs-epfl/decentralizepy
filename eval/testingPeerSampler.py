@@ -11,8 +11,6 @@ from decentralizepy.mappings.Linear import Linear
 from decentralizepy.node.DPSGDWithPeerSampler import DPSGDWithPeerSampler
 from decentralizepy.node.PeerSamplerDynamic import PeerSamplerDynamic
 from decentralizepy.node.PeerSampler import PeerSampler
-from decentralizepy.node.ParameterServer import ParameterServer
-from decentralizepy.node.DPSGDNodeWithParameterServer import DPSGDNodeWithParameterServer
 
 
 def read_ini(file_path):
@@ -62,8 +60,7 @@ if __name__ == "__main__":
         processes.append(
             mp.Process(
                 # target=PeerSamplerDynamic,
-                target=ParameterServer,
-                # target=PeerSampler,
+                target=PeerSampler,
                 args=[
                     sr,
                     m_id,
@@ -80,8 +77,7 @@ if __name__ == "__main__":
     for r in range(0, procs_per_machine):
         processes.append(
             mp.Process(
-                target=DPSGDNodeWithParameterServer,
-                # target=DPSGDWithPeerSampler,
+                target=DPSGDWithPeerSampler,
                 args=[
                     r,
                     m_id,

@@ -67,7 +67,7 @@ def plot_results(path, centralized, data_machine="machine0", data_node=0):
                 filepath = os.path.join(mf_path, f)
                 with open(filepath, "r") as inf:
                     results.append(json.load(inf))
-        if folder.startswith("FL"):
+        if folder.startswith("FL") or folder.startswith("Parameter Server"):
             data_node = -1
         else:
             data_node = 0
@@ -76,7 +76,8 @@ def plot_results(path, centralized, data_machine="machine0", data_node=0):
         main_data = [main_data]
         # Plot Training loss
         plt.figure(1)
-        means, stdevs, mins, maxs = get_stats([x["train_loss"] for x in results])
+        means, stdevs, mins, maxs = get_stats(
+            [x["train_loss"] for x in results])
         plot(means, stdevs, mins, maxs, "Training Loss", folder, "upper right")
         df = pd.DataFrame(
             {
@@ -93,9 +94,11 @@ def plot_results(path, centralized, data_machine="machine0", data_node=0):
         # Plot Testing loss
         plt.figure(2)
         if centralized:
-            means, stdevs, mins, maxs = get_stats([x["test_loss"] for x in main_data])
+            means, stdevs, mins, maxs = get_stats(
+                [x["test_loss"] for x in main_data])
         else:
-            means, stdevs, mins, maxs = get_stats([x["test_loss"] for x in results])
+            means, stdevs, mins, maxs = get_stats(
+                [x["test_loss"] for x in results])
         plot(means, stdevs, mins, maxs, "Testing Loss", folder, "upper right")
         df = pd.DataFrame(
             {
@@ -112,9 +115,11 @@ def plot_results(path, centralized, data_machine="machine0", data_node=0):
         # Plot Testing Accuracy
         plt.figure(3)
         if centralized:
-            means, stdevs, mins, maxs = get_stats([x["test_acc"] for x in main_data])
+            means, stdevs, mins, maxs = get_stats(
+                [x["test_acc"] for x in main_data])
         else:
-            means, stdevs, mins, maxs = get_stats([x["test_acc"] for x in results])
+            means, stdevs, mins, maxs = get_stats(
+                [x["test_acc"] for x in results])
         plot(means, stdevs, mins, maxs, "Testing Accuracy", folder, "lower right")
         df = pd.DataFrame(
             {
@@ -153,6 +158,7 @@ def plot_results(path, centralized, data_machine="machine0", data_node=0):
         means, stdevs, mins, maxs = get_stats(bytes_list)
         bytes_means[folder] = list(means.values())[0]
         bytes_stdevs[folder] = list(stdevs.values())[0]
+        print(bytes_list)
 
         meta_list = []
         for x in results:
