@@ -11,8 +11,7 @@ procs_per_machine=8
 machines=2
 iterations=5
 test_after=2
-eval_file=testingFederated.py
-#eval_file=testingPeerSampler.py
+eval_file=testingPeerSampler.py
 log_level=INFO
 
 m=`cat $(grep addresses_filepath $original_config | awk '{print $3}') | grep $(/sbin/ifconfig ens785 | grep 'inet ' | awk '{print $2}') | cut -d'"' -f2`

@@ -54,9 +54,6 @@ if __name__ == "__main__":
     sm = args.server_machine
     sr = args.server_rank
 
-    # TODO
-    working_fraction = 1.0
-
     processes = []
     if sm == m_id:
         processes.append(
@@ -74,7 +71,7 @@ if __name__ == "__main__":
                     log_level[args.log_level],
                     args.test_after,
                     args.train_evaluate_after,
-                    working_fraction,
+                    args.working_rate,
                 ],
             )
         )
