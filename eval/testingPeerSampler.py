@@ -9,8 +9,8 @@ from decentralizepy import utils
 from decentralizepy.graphs.Graph import Graph
 from decentralizepy.mappings.Linear import Linear
 from decentralizepy.node.DPSGDWithPeerSampler import DPSGDWithPeerSampler
-from decentralizepy.node.PeerSamplerDynamic import PeerSamplerDynamic
 from decentralizepy.node.PeerSampler import PeerSampler
+# from decentralizepy.node.PeerSamplerDynamic import PeerSamplerDynamic
 
 
 def read_ini(file_path):
@@ -91,8 +91,6 @@ if __name__ == "__main__":
                     args.test_after,
                     args.train_evaluate_after,
                     args.reset_optimizer,
-                    args.centralized_train_eval,
-                    args.centralized_test_eval,
                 ],
             )
         )

@@ -47,8 +47,6 @@ class DPSGDWithPeerSampler(DPSGDNode):
         test_after=5,
         train_evaluate_after=1,
         reset_optimizer=1,
-        centralized_train_eval=0,
-        centralized_test_eval=1,
         peer_sampler_uid=-1,
         *args
     ):
@@ -93,19 +91,10 @@ class DPSGDWithPeerSampler(DPSGDNode):
             Number of iterations after which the train loss is calculated
         reset_optimizer : int
             1 if optimizer should be reset every communication round, else 0
-        centralized_train_eval : int
-            If set then the train set evaluation happens at the node with uid 0.
-            Note: If it is True then centralized_test_eval needs to be true as well!
-        centralized_test_eval : int
-            If set then the trainset evaluation happens at the node with uid 0
         args : optional
             Other arguments
 
         """
-        centralized_train_eval = centralized_train_eval == 1
-        centralized_test_eval = centralized_test_eval == 1
-        # If centralized_train_eval is True then centralized_test_eval needs to be true as well!
-        assert not centralized_train_eval or centralized_test_eval
 
         total_threads = os.cpu_count()
         self.threads_per_proc = max(
@@ -126,8 +115,6 @@ class DPSGDWithPeerSampler(DPSGDNode):
             test_after,
             train_evaluate_after,
             reset_optimizer,
-            centralized_train_eval == 1,
-            centralized_test_eval == 1,
             *args
         )
         logging.info(

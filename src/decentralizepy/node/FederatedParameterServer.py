@@ -5,6 +5,7 @@ import math
 import os
 import random
 from collections import deque
+
 from matplotlib import pyplot as plt
 
 from decentralizepy import utils
@@ -134,8 +135,7 @@ class FederatedParameterServer(Node):
         """
         comm_module = importlib.import_module(comm_configs["comm_package"])
         comm_class = getattr(comm_module, comm_configs["comm_class"])
-        comm_params = utils.remove_keys(
-            comm_configs, ["comm_package", "comm_class"])
+        comm_params = utils.remove_keys(comm_configs, ["comm_package", "comm_class"])
         self.addresses_filepath = comm_params.get("addresses_filepath", None)
         self.communication = comm_class(
             self.rank, self.machine_id, self.mapping, self.graph.n_procs, **comm_params
@@ -291,9 +291,7 @@ class FederatedParameterServer(Node):
 
             # Notify workers
             for worker in self.current_workers:
-                self.communication.send(
-                    worker, to_send
-                )
+                self.communication.send(worker, to_send)
 
             # Receive updates from current workers
             while not self.received_from_all():
@@ -314,8 +312,7 @@ class FederatedParameterServer(Node):
 
             if iteration:
                 with open(
-                    os.path.join(
-                        self.log_dir, "{}_results.json".format(self.rank)),
+                    os.path.join(self.log_dir, "{}_results.json".format(self.rank)),
                     "r",
                 ) as inf:
                     results_dict = json.load(inf)
@@ -327,12 +324,9 @@ class FederatedParameterServer(Node):
                     "total_bytes": {},
                     "total_meta": {},
                     "total_data_per_n": {},
-                    "grad_mean": {},
-                    "grad_std": {},
                 }
 
-            results_dict["total_bytes"][iteration
-                                        + 1] = self.communication.total_bytes
+            results_dict["total_bytes"][iteration + 1] = self.communication.total_bytes
 
             if hasattr(self.communication, "total_meta"):
                 results_dict["total_meta"][
@@ -342,10 +336,6 @@ class FederatedParameterServer(Node):
                 results_dict["total_data_per_n"][
                     iteration + 1
                 ] = self.communication.total_data
-            if hasattr(self.sharing, "mean"):
-                results_dict["grad_mean"][iteration + 1] = self.sharing.mean
-            if hasattr(self.sharing, "std"):
-                results_dict["grad_std"][iteration + 1] = self.sharing.std
 
             rounds_to_train_evaluate -= 1
 
@@ -359,8 +349,7 @@ class FederatedParameterServer(Node):
                     "train_loss",
                     "Training Loss",
                     "Communication Rounds",
-                    os.path.join(
-                        self.log_dir, "{}_train_loss.png".format(self.rank)),
+                    os.path.join(self.log_dir, "{}_train_loss.png".format(self.rank)),
                 )
 
             rounds_to_test -= 1
@@ -378,8 +367,7 @@ class FederatedParameterServer(Node):
                 global_epoch += change
 
             with open(
-                os.path.join(
-                    self.log_dir, "{}_results.json".format(self.rank)), "w"
+                os.path.join(self.log_dir, "{}_results.json".format(self.rank)), "w"
             ) as of:
                 json.dump(results_dict, of)
 
@@ -391,8 +379,7 @@ class FederatedParameterServer(Node):
                 ),
                 "w",
             ) as of:
-                json.dump(
-                    self.model.shared_parameters_counter.numpy().tolist(), of)
+                json.dump(self.model.shared_parameters_counter.numpy().tolist(), of)
 
         self.disconnect_neighbors()
         logging.info("Storing final weight")

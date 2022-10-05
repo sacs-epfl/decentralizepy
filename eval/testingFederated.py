@@ -8,8 +8,8 @@ from torch import multiprocessing as mp
 from decentralizepy import utils
 from decentralizepy.graphs.Graph import Graph
 from decentralizepy.mappings.Linear import Linear
-from decentralizepy.node.FederatedParameterServer import FederatedParameterServer
 from decentralizepy.node.DPSGDNodeFederated import DPSGDNodeFederated
+from decentralizepy.node.FederatedParameterServer import FederatedParameterServer
 
 
 def read_ini(file_path):

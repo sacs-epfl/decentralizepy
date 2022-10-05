@@ -80,15 +80,13 @@ class Sharing:
         result = dict(data)
         if self.compress:
             if "params" in result:
-                result["params"] = self.compressor.compress_float(
-                    result["params"])
+                result["params"] = self.compressor.compress_float(result["params"])
         return result
 
     def decompress_data(self, data):
         if self.compress:
             if "params" in data:
-                data["params"] = self.compressor.decompress_float(
-                    data["params"])
+                data["params"] = self.compressor.decompress_float(data["params"])
         return data
 
     def serialized_model(self):

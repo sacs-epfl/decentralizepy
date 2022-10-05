@@ -83,8 +83,6 @@ def get_args():
     parser.add_argument("-ta", "--test_after", type=int, default=5)
     parser.add_argument("-tea", "--train_evaluate_after", type=int, default=1)
     parser.add_argument("-ro", "--reset_optimizer", type=int, default=1)
-    parser.add_argument("-ctr", "--centralized_train_eval", type=int, default=0)
-    parser.add_argument("-cte", "--centralized_test_eval", type=int, default=0)
     parser.add_argument("-sm", "--server_machine", type=int, default=0)
     parser.add_argument("-sr", "--server_rank", type=int, default=-1)
     parser.add_argument("-wr", "--working_rate", type=float, default=1.0)
@@ -119,8 +117,6 @@ def write_args(args, path):
         "test_after": args.test_after,
         "train_evaluate_after": args.train_evaluate_after,
         "reset_optimizer": args.reset_optimizer,
-        "centralized_train_eval": args.centralized_train_eval,
-        "centralized_test_eval": args.centralized_test_eval,
         "working_rate": args.working_rate,
     }
     with open(os.path.join(path, "args.json"), "w") as of:

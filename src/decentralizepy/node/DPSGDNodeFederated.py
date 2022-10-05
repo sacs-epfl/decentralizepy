@@ -40,11 +40,11 @@ class DPSGDNodeFederated(Node):
             self.sharing._post_step()
             self.sharing.communication_round += 1
 
-            logging.info("Received worker request at node {}, global iteration {}, local round {}".format(
-                self.uid,
-                iteration,
-                self.participated
-            ))
+            logging.info(
+                "Received worker request at node {}, global iteration {}, local round {}".format(
+                    self.uid, iteration, self.participated
+                )
+            )
 
             if self.reset_optimizer:
                 self.optimizer = self.optimizer_class(
@@ -63,8 +63,7 @@ class DPSGDNodeFederated(Node):
 
             if self.participated > 0:
                 with open(
-                    os.path.join(
-                        self.log_dir, "{}_results.json".format(self.rank)),
+                    os.path.join(self.log_dir, "{}_results.json".format(self.rank)),
                     "r",
                 ) as inf:
                     results_dict = json.load(inf)
@@ -76,12 +75,9 @@ class DPSGDNodeFederated(Node):
                     "total_bytes": {},
                     "total_meta": {},
                     "total_data_per_n": {},
-                    "grad_mean": {},
-                    "grad_std": {},
                 }
 
-            results_dict["total_bytes"][iteration
-                                        + 1] = self.communication.total_bytes
+            results_dict["total_bytes"][iteration + 1] = self.communication.total_bytes
 
             if hasattr(self.communication, "total_meta"):
                 results_dict["total_meta"][
@@ -91,14 +87,9 @@ class DPSGDNodeFederated(Node):
                 results_dict["total_data_per_n"][
                     iteration + 1
                 ] = self.communication.total_data
-            if hasattr(self.sharing, "mean"):
-                results_dict["grad_mean"][iteration + 1] = self.sharing.mean
-            if hasattr(self.sharing, "std"):
-                results_dict["grad_std"][iteration + 1] = self.sharing.std
-            
+
             with open(
-                os.path.join(
-                    self.log_dir, "{}_results.json".format(self.rank)), "w"
+                os.path.join(self.log_dir, "{}_results.json".format(self.rank)), "w"
             ) as of:
                 json.dump(results_dict, of)
 
@@ -122,7 +113,7 @@ class DPSGDNodeFederated(Node):
         weights_store_dir,
         test_after,
         train_evaluate_after,
-        reset_optimizer
+        reset_optimizer,
     ):
         """
         Instantiate object field with arguments.
@@ -179,8 +170,7 @@ class DPSGDNodeFederated(Node):
         """
         comm_module = importlib.import_module(comm_configs["comm_package"])
         comm_class = getattr(comm_module, comm_configs["comm_class"])
-        comm_params = utils.remove_keys(
-            comm_configs, ["comm_package", "comm_class"])
+        comm_params = utils.remove_keys(comm_configs, ["comm_package", "comm_class"])
         self.addresses_filepath = comm_params.get("addresses_filepath", None)
         self.communication = comm_class(
             self.rank, self.machine_id, self.mapping, self.graph.n_procs, **comm_params

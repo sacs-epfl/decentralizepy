@@ -65,7 +65,33 @@ if __name__ == "__main__":
             args.test_after,
             args.train_evaluate_after,
             args.reset_optimizer,
-            args.centralized_train_eval,
-            args.centralized_test_eval,
         ],
     )
+
+    processes = []
+    for r in range(procs_per_machine):
+        processes.append(
+            mp.Process(
+                target=DPSGDNode,
+                args=[
+                    r,
+                    m_id,
+                    l,
+                    g,
+                    my_config,
+                    args.iterations,
+                    args.log_dir,
+                    args.weights_store_dir,
+                    log_level[args.log_level],
+                    args.test_after,
+                    args.train_evaluate_after,
+                    args.reset_optimizer,
+                ],
+            )
+        )
+
+    for p in processes:
+        p.start()
+
+    for p in processes:
+        p.join()

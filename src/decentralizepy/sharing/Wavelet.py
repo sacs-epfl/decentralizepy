@@ -134,8 +134,7 @@ class Wavelet(PartialModel):
         self.change_based_selection = change_based_selection
 
         # Do a dummy transform to get the shape and coefficents slices
-        coeff = pywt.wavedec(self.init_model.numpy(),
-                             self.wavelet, level=self.level)
+        coeff = pywt.wavedec(self.init_model.numpy(), self.wavelet, level=self.level)
         data, coeff_slices = pywt.coeffs_to_array(coeff)
         self.wt_shape = data.shape
         self.coeff_slices = coeff_slices
@@ -212,8 +211,7 @@ class Wavelet(PartialModel):
                 with open(
                     os.path.join(
                         self.folder_path,
-                        "{}_shared_params.json".format(
-                            self.communication_round + 1),
+                        "{}_shared_params.json".format(self.communication_round + 1),
                     ),
                     "w",
                 ) as of:

@@ -76,8 +76,7 @@ def plot_results(path, centralized, data_machine="machine0", data_node=0):
         main_data = [main_data]
         # Plot Training loss
         plt.figure(1)
-        means, stdevs, mins, maxs = get_stats(
-            [x["train_loss"] for x in results])
+        means, stdevs, mins, maxs = get_stats([x["train_loss"] for x in results])
         plot(means, stdevs, mins, maxs, "Training Loss", folder, "upper right")
         df = pd.DataFrame(
             {
@@ -94,11 +93,9 @@ def plot_results(path, centralized, data_machine="machine0", data_node=0):
         # Plot Testing loss
         plt.figure(2)
         if centralized:
-            means, stdevs, mins, maxs = get_stats(
-                [x["test_loss"] for x in main_data])
+            means, stdevs, mins, maxs = get_stats([x["test_loss"] for x in main_data])
         else:
-            means, stdevs, mins, maxs = get_stats(
-                [x["test_loss"] for x in results])
+            means, stdevs, mins, maxs = get_stats([x["test_loss"] for x in results])
         plot(means, stdevs, mins, maxs, "Testing Loss", folder, "upper right")
         df = pd.DataFrame(
             {
@@ -115,11 +112,9 @@ def plot_results(path, centralized, data_machine="machine0", data_node=0):
         # Plot Testing Accuracy
         plt.figure(3)
         if centralized:
-            means, stdevs, mins, maxs = get_stats(
-                [x["test_acc"] for x in main_data])
+            means, stdevs, mins, maxs = get_stats([x["test_acc"] for x in main_data])
         else:
-            means, stdevs, mins, maxs = get_stats(
-                [x["test_acc"] for x in results])
+            means, stdevs, mins, maxs = get_stats([x["test_acc"] for x in results])
         plot(means, stdevs, mins, maxs, "Testing Accuracy", folder, "lower right")
         df = pd.DataFrame(
             {
@@ -133,23 +128,7 @@ def plot_results(path, centralized, data_machine="machine0", data_node=0):
         df.to_csv(
             os.path.join(path, "test_acc_" + folder + ".csv"), index_label="rounds"
         )
-        plt.figure(6)
-        means, stdevs, mins, maxs = get_stats([x["grad_std"] for x in results])
-        plot(
-            means,
-            stdevs,
-            mins,
-            maxs,
-            "Gradient Variation over Nodes",
-            folder,
-            "upper right",
-        )
-        # Plot Testing loss
-        plt.figure(7)
-        means, stdevs, mins, maxs = get_stats([x["grad_mean"] for x in results])
-        plot(
-            means, stdevs, mins, maxs, "Gradient Magnitude Mean", folder, "upper right"
-        )
+
         # Collect total_bytes shared
         bytes_list = []
         for x in results:
@@ -185,10 +164,6 @@ def plot_results(path, centralized, data_machine="machine0", data_node=0):
     plt.savefig(os.path.join(path, "test_loss.png"), dpi=300)
     plt.figure(3)
     plt.savefig(os.path.join(path, "test_acc.png"), dpi=300)
-    plt.figure(6)
-    plt.savefig(os.path.join(path, "grad_std.png"), dpi=300)
-    plt.figure(7)
-    plt.savefig(os.path.join(path, "grad_mean.png"), dpi=300)
     # Plot total_bytes
     plt.figure(4)
     plt.title("Data Shared")

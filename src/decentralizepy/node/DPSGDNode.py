@@ -9,12 +9,9 @@ import torch
 from matplotlib import pyplot as plt
 
 from decentralizepy import utils
-from decentralizepy.communication.TCP import TCP
 from decentralizepy.graphs.Graph import Graph
-from decentralizepy.graphs.Star import Star
 from decentralizepy.mappings.Mapping import Mapping
 from decentralizepy.node.Node import Node
-from decentralizepy.train_test_evaluation import TrainTestHelper
 
 
 class DPSGDNode(Node):
@@ -70,42 +67,18 @@ class DPSGDNode(Node):
         rounds_to_train_evaluate = self.train_evaluate_after
         global_epoch = 1
         change = 1
-        if self.uid == 0:
-            dataset = self.dataset
-            if self.centralized_train_eval:
-                dataset_params_copy = self.dataset_params.copy()
-                if "sizes" in dataset_params_copy:
-                    del dataset_params_copy["sizes"]
-                self.whole_dataset = self.dataset_class(
-                    self.rank,
-                    self.machine_id,
-                    self.mapping,
-                    sizes=[1.0],
-                    **dataset_params_copy
-                )
-                dataset = self.whole_dataset
-            if self.centralized_test_eval:
-                tthelper = TrainTestHelper(
-                    dataset,  # self.whole_dataset,
-                    # self.model_test, # todo: this only works if eval_train is set to false
-                    self.model,
-                    self.loss,
-                    self.weights_store_dir,
-                    self.mapping.get_n_procs(),
-                    self.trainer,
-                    self.testing_comm,
-                    self.star,
-                    self.threads_per_proc,
-                    eval_train=self.centralized_train_eval,
-                )
 
         for iteration in range(self.iterations):
             logging.info("Starting training iteration: %d", iteration)
+            rounds_to_train_evaluate -= 1
+            rounds_to_test -= 1
+
             self.iteration = iteration
             self.trainer.train(self.dataset)
 
             new_neighbors = self.get_neighbors()
 
+            # The following code does not work because TCP sockets are supposed to be long lived.
             # for neighbor in self.my_neighbors:
             #     if neighbor not in new_neighbors:
             #         logging.info("Removing neighbor {}".format(neighbor))
@@ -163,8 +136,6 @@ class DPSGDNode(Node):
                     "total_bytes": {},
                     "total_meta": {},
                     "total_data_per_n": {},
-                    "grad_mean": {},
-                    "grad_std": {},
                 }
 
             results_dict["total_bytes"][iteration + 1] = self.communication.total_bytes
@@ -177,14 +148,8 @@ class DPSGDNode(Node):
                 results_dict["total_data_per_n"][
                     iteration + 1
                 ] = self.communication.total_data
-            if hasattr(self.sharing, "mean"):
-                results_dict["grad_mean"][iteration + 1] = self.sharing.mean
-            if hasattr(self.sharing, "std"):
-                results_dict["grad_std"][iteration + 1] = self.sharing.std
 
-            rounds_to_train_evaluate -= 1
-
-            if rounds_to_train_evaluate == 0 and not self.centralized_train_eval:
+            if rounds_to_train_evaluate == 0:
                 logging.info("Evaluating on train set.")
                 rounds_to_train_evaluate = self.train_evaluate_after * change
                 loss_after_sharing = self.trainer.eval_loss(self.dataset)
@@ -197,26 +162,12 @@ class DPSGDNode(Node):
                     os.path.join(self.log_dir, "{}_train_loss.png".format(self.rank)),
                 )
 
-            rounds_to_test -= 1
-
             if self.dataset.__testing__ and rounds_to_test == 0:
                 rounds_to_test = self.test_after * change
-                if self.centralized_test_eval:
-                    if self.uid == 0:
-                        ta, tl, trl = tthelper.train_test_evaluation(iteration)
-                        results_dict["test_acc"][iteration + 1] = ta
-                        results_dict["test_loss"][iteration + 1] = tl
-                        if trl is not None:
-                            results_dict["train_loss"][iteration + 1] = trl
-                    else:
-                        self.testing_comm.send(0, self.model.get_weights())
-                        sender, data = self.testing_comm.receive()
-                        assert sender == 0 and data == "finished"
-                else:
-                    logging.info("Evaluating on test set.")
-                    ta, tl = self.dataset.test(self.model, self.loss)
-                    results_dict["test_acc"][iteration + 1] = ta
-                    results_dict["test_loss"][iteration + 1] = tl
+                logging.info("Evaluating on test set.")
+                ta, tl = self.dataset.test(self.model, self.loss)
+                results_dict["test_acc"][iteration + 1] = ta
+                results_dict["test_loss"][iteration + 1] = tl
 
                 if global_epoch == 49:
                     change *= 2
@@ -253,8 +204,6 @@ class DPSGDNode(Node):
         test_after,
         train_evaluate_after,
         reset_optimizer,
-        centralized_train_eval,
-        centralized_test_eval,
     ):
         """
         Instantiate object field with arguments.
@@ -281,10 +230,6 @@ class DPSGDNode(Node):
             Number of iterations after which the train loss is calculated
         reset_optimizer : int
             1 if optimizer should be reset every communication round, else 0
-        centralized_train_eval : bool
-            If set the train set evaluation happens at the node with uid 0
-        centralized_test_eval : bool
-            If set the train set evaluation happens at the node with uid 0
         """
         self.rank = rank
         self.machine_id = machine_id
@@ -297,16 +242,11 @@ class DPSGDNode(Node):
         self.test_after = test_after
         self.train_evaluate_after = train_evaluate_after
         self.reset_optimizer = reset_optimizer
-        self.centralized_train_eval = centralized_train_eval
-        self.centralized_test_eval = centralized_test_eval
         self.sent_disconnections = False
 
         logging.info("Rank: %d", self.rank)
         logging.info("type(graph): %s", str(type(self.rank)))
         logging.info("type(mapping): %s", str(type(self.mapping)))
-
-        if centralized_test_eval or centralized_train_eval:
-            self.star = Star(self.mapping.get_n_procs())
 
     def init_comm(self, comm_configs):
         """
@@ -322,17 +262,6 @@ class DPSGDNode(Node):
         comm_class = getattr(comm_module, comm_configs["comm_class"])
         comm_params = utils.remove_keys(comm_configs, ["comm_package", "comm_class"])
         self.addresses_filepath = comm_params.get("addresses_filepath", None)
-        if self.centralized_test_eval:
-            self.testing_comm = TCP(
-                self.rank,
-                self.machine_id,
-                self.mapping,
-                self.star.n_procs,
-                self.addresses_filepath,
-                offset=self.star.n_procs,
-            )
-            self.testing_comm.connect_neighbors(self.star.neighbors(self.uid))
-
         self.communication = comm_class(
             self.rank, self.machine_id, self.mapping, self.graph.n_procs, **comm_params
         )
@@ -351,8 +280,6 @@ class DPSGDNode(Node):
         test_after=5,
         train_evaluate_after=1,
         reset_optimizer=1,
-        centralized_train_eval=False,
-        centralized_test_eval=True,
         *args
     ):
         """
@@ -384,10 +311,6 @@ class DPSGDNode(Node):
             Number of iterations after which the train loss is calculated
         reset_optimizer : int
             1 if optimizer should be reset every communication round, else 0
-        centralized_train_eval : bool
-            If set the train set evaluation happens at the node with uid 0
-        centralized_test_eval : bool
-            If set the train set evaluation happens at the node with uid 0
         args : optional
             Other arguments
 
@@ -407,8 +330,6 @@ class DPSGDNode(Node):
             test_after,
             train_evaluate_after,
             reset_optimizer,
-            centralized_train_eval,
-            centralized_test_eval,
         )
         self.init_dataset_model(config["DATASET"])
         self.init_optimizer(config["OPTIMIZER_PARAMS"])
@@ -423,7 +344,6 @@ class DPSGDNode(Node):
         self.init_sharing(config["SHARING"])
         self.peer_deques = dict()
         self.connect_neighbors()
-        # self.instantiate_peer_deques()
 
     def received_from_all(self):
         """
@@ -454,8 +374,6 @@ class DPSGDNode(Node):
         test_after=5,
         train_evaluate_after=1,
         reset_optimizer=1,
-        centralized_train_eval=0,
-        centralized_test_eval=1,
         *args
     ):
         """
@@ -499,19 +417,10 @@ class DPSGDNode(Node):
             Number of iterations after which the train loss is calculated
         reset_optimizer : int
             1 if optimizer should be reset every communication round, else 0
-        centralized_train_eval : int
-            If set then the train set evaluation happens at the node with uid 0.
-            Note: If it is True then centralized_test_eval needs to be true as well!
-        centralized_test_eval : int
-            If set then the trainset evaluation happens at the node with uid 0
         args : optional
             Other arguments
 
         """
-        centralized_train_eval = centralized_train_eval == 1
-        centralized_test_eval = centralized_test_eval == 1
-        # If centralized_train_eval is True then centralized_test_eval needs to be true as well!
-        assert not centralized_train_eval or centralized_test_eval
 
         total_threads = os.cpu_count()
         self.threads_per_proc = max(
@@ -532,8 +441,6 @@ class DPSGDNode(Node):
             test_after,
             train_evaluate_after,
             reset_optimizer,
-            centralized_train_eval == 1,
-            centralized_test_eval == 1,
             *args
         )
         logging.info(

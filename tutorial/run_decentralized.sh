@@ -8,7 +8,7 @@ graph=/mnt/nfs/risharma/Gitlab/tutorial/96_regular.edges
 original_config=/mnt/nfs/risharma/Gitlab/tutorial/config_celeba_sharing.ini
 config_file=~/tmp/config.ini
 procs_per_machine=16
-machines=6
+machines=1
 iterations=80
 test_after=20
 eval_file=testingPeerSampler.py
@@ -21,4 +21,4 @@ mkdir -p $log_dir
 
 cp $original_config $config_file
 # echo "alpha = 0.10" >> $config_file
-$env_python $eval_file -ro 0 -tea $test_after -ld $log_dir -mid $m -ps $procs_per_machine -ms $machines -is $iterations -gf $graph -ta $test_after -cf $config_file -ll $log_level -ctr 0 -cte 0 -wsd $log_dir
+$env_python $eval_file -ro 0 -tea $test_after -ld $log_dir -mid $m -ps $procs_per_machine -ms $machines -is $iterations -gf $graph -ta $test_after -cf $config_file -ll $log_level -wsd $log_dir
