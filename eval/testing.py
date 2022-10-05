@@ -50,24 +50,6 @@ if __name__ == "__main__":
     l = Linear(n_machines, procs_per_machine)
     m_id = args.machine_id
 
-    mp.spawn(
-        fn=DPSGDNode,
-        nprocs=procs_per_machine,
-        args=[
-            m_id,
-            l,
-            g,
-            my_config,
-            args.iterations,
-            args.log_dir,
-            args.weights_store_dir,
-            log_level[args.log_level],
-            args.test_after,
-            args.train_evaluate_after,
-            args.reset_optimizer,
-        ],
-    )
-
     processes = []
     for r in range(procs_per_machine):
         processes.append(
