@@ -1,3 +1,4 @@
+# Deprecated
 import logging
 from collections import deque
 
@@ -188,6 +189,7 @@ class Sharing:
             iteration = data["iteration"]
             del data["degree"]
             del data["iteration"]
+            del data["CHANNEL"]
             self.peer_deques[sender].append((degree, iteration, data))
             logging.info(
                 "Deserialized received model from {} of iteration {}".format(

@@ -31,6 +31,9 @@ class TopKNormalized(PartialModel):
         change_transformer=identity,
         accumulate_averaging_changes=False,
         epsilon=0.01,
+        compress=False,
+        compression_package=None,
+        compression_class=None,
     ):
         """
         Constructor
@@ -91,6 +94,9 @@ class TopKNormalized(PartialModel):
             save_accumulated,
             change_transformer,
             accumulate_averaging_changes,
+            compress,
+            compression_package,
+            compression_class,
         )
         self.epsilon = epsilon
 

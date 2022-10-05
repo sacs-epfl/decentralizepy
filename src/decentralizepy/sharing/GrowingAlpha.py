@@ -1,3 +1,4 @@
+# Deprecated
 import logging
 
 from decentralizepy.sharing.PartialModel import PartialModel
@@ -25,6 +26,9 @@ class GrowingAlpha(PartialModel):
         dict_ordered=True,
         save_shared=False,
         metadata_cap=1.0,
+        compress=False,
+        compression_package=None,
+        compression_class=None,
     ):
         """
         Constructor
@@ -74,12 +78,15 @@ class GrowingAlpha(PartialModel):
             dict_ordered,
             save_shared,
             metadata_cap,
+            compress,
+            compression_package,
+            compression_class,
         )
         self.init_alpha = init_alpha
         self.max_alpha = max_alpha
         self.k = k
 
-    def step(self):
+    def get_data_to_send(self):
         """
         Perform a sharing step. Implements D-PSGD with alpha increasing as a linear function.
 
@@ -93,4 +100,4 @@ class GrowingAlpha(PartialModel):
             self.communication_round += 1
             return
 
-        super().step()
+        return super().get_data_to_send()

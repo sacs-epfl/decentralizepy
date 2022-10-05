@@ -38,11 +38,11 @@ cd $decpy_path
 
 env_python=$python_bin/python3
 graph=96_regular.edges
-config_file=~/tmp/config.ini
+config_file=~/tmp/config_celeba_sharing.ini
 procs_per_machine=16
 machines=6
 global_epochs=150
-eval_file=testing.py
+eval_file=testingFederated.py
 log_level=INFO
 
 ip_machines=$nfs_home/configs/ip_addr_6Machines.json
@@ -51,7 +51,8 @@ m=`cat $ip_machines | grep $(/sbin/ifconfig ens785 | grep 'inet ' | awk '{print 
 export PYTHONFAULTHANDLER=1
 
 # Base configs for which the gird search is done
-tests=("step_configs/config_celeba_sharing.ini" "step_configs/config_celeba_partialmodel.ini" "step_configs/config_celeba_topkacc.ini" "step_configs/config_celeba_subsampling.ini" "step_configs/config_celeba_wavelet.ini")
+#tests=("step_configs/config_celeba_sharing.ini" "step_configs/config_celeba_partialmodel.ini" "step_configs/config_celeba_topkacc.ini" "step_configs/config_celeba_subsampling.ini" "step_configs/config_celeba_wavelet.ini")
+tests=("step_configs/config_celeba_sharing.ini")
 # Learning rates
 lr="0.001"
 # Batch size
@@ -66,7 +67,8 @@ samples_per_user=`expr $dataset_size / $procs`
 echo samples per user: $samples_per_user
 
 # random_seeds for which to rerun the experiments
-random_seeds=("90" "91" "92" "93" "94")
+#random_seeds=("90" "91" "92" "93" "94")
+random_seeds=("90")
 # random_seed = 97
 echo batchsize: $batchsize
 echo communication rounds per global epoch: $comm_rounds_per_global_epoch
@@ -91,7 +93,7 @@ do
     echo $i
     IFS='_' read -ra NAMES <<< $i
     IFS='.' read -ra NAME <<< ${NAMES[-1]}
-    log_dir_base=$nfs_home$logs_subfolder/${NAME[0]}:lr=$lr:r=$comm_rounds_per_global_epoch:b=$batchsize:$(date '+%Y-%m-%dT%H:%M')
+    log_dir_base=$nfs_home/$logs_subfolder/${NAME[0]}:lr=$lr:r=$comm_rounds_per_global_epoch:b=$batchsize:$(date '+%Y-%m-%dT%H:%M')
     echo results are stored in: $log_dir_base
     log_dir=$log_dir_base/machine$m
     mkdir -p $log_dir

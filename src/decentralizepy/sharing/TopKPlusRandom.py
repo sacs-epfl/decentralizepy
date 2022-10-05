@@ -26,6 +26,9 @@ class TopKPlusRandom(PartialModel):
         dict_ordered=True,
         save_shared=False,
         metadata_cap=1.0,
+        compress=False,
+        compression_package=None,
+        compression_class=None,
     ):
         """
         Constructor
@@ -71,6 +74,9 @@ class TopKPlusRandom(PartialModel):
             dict_ordered,
             save_shared,
             metadata_cap,
+            compress,
+            compression_package,
+            compression_class,
         )
 
     def extract_top_gradients(self):

@@ -1,5 +1,6 @@
 #!/bin/bash
 # Documentation
+# Note: documentation was not written for this run file, so actual behaviour may differ
 # This bash file takes three inputs. The first argument (nfs_home) is the path to the nfs home directory.
 # The second one (python_bin) is the path to the python bin folder.
 # The last argument (logs_subfolder) is the path to the logs folder with respect to the nfs home directory.
@@ -18,8 +19,10 @@
 # Each node needs a folder called 'tmp' in the user's home directory
 #
 # Note:
-# - The script does not change the optimizer. All configs are writen to use SGD.
-# - The script will set '--test_after' and '--train_evaluate_after' such that it happens at the end of a global epoch.
+# - The script does not change the optimizer. All configs are writen to use Adam.
+#   For SGD these need to be changed manually
+# - The script will set '--test_after' and '--train_evaluate_after' to comm_rounds_per_global_epoch, i.e., the eavaluation
+#   on the train set and on the test set is carried out every global epoch.
 # - The '--reset_optimizer' option is set to 0, i.e., the optimizer is not reset after a communication round (only
 #   relevant for Adams and other optimizers with internal state)
 #
@@ -37,41 +40,40 @@ decpy_path=$nfs_home/decentralizepy/eval
 cd $decpy_path
 
 env_python=$python_bin/python3
-graph=96_regular.edges
 config_file=~/tmp/config.ini
 procs_per_machine=16
 machines=6
 global_epochs=150
-eval_file=testing.py
+eval_file=testingPeerSampler.py
 log_level=INFO
-
-ip_machines=$nfs_home/configs/ip_addr_6Machines.json
-
+ip_machines=$nfs_home/$logs_subfolder/ip_addr_6Machines.json
 m=`cat $ip_machines | grep $(/sbin/ifconfig ens785 | grep 'inet ' | awk '{print $2}') | cut -d'"' -f2`
 export PYTHONFAULTHANDLER=1
-
 # Base configs for which the gird search is done
-tests=("step_configs/config_femnist_partialmodel.ini" "step_configs/config_femnist_topkacc.ini" "step_configs/config_femnist_wavelet.ini")
+tests="$nfs_home/$logs_subfolder/config.ini"
+#tests=("$nfs_home/$logs_subfolder/config_cifar_sharing.ini" "$nfs_home/$logs_subfolder/config_cifar_partialmodel.ini" "$nfs_home/$logs_subfolder/config_cifar_topkacc.ini" "$nfs_home/$logs_subfolder/config_cifar_topkaccRandomAlpha.ini" "$nfs_home/$logs_subfolder/config_cifar_subsampling.ini" "$nfs_home/$logs_subfolder/config_cifar_wavelet.ini" "$nfs_home/$logs_subfolder/config_cifar_waveletRandomAlpha.ini")
+#tests=("$nfs_home/$logs_subfolder/config_cifar_partialmodel.ini" "$nfs_home/$logs_subfolder/config_cifar_topkacc.ini" "$nfs_home/$logs_subfolder/config_cifar_topkaccRandomAlpha.ini" "$nfs_home/$logs_subfolder/config_cifar_subsampling.ini" "$nfs_home/$logs_subfolder/config_cifar_wavelet.ini" "$nfs_home/$logs_subfolder/config_cifar_waveletRandomAlpha.ini")
+#tests=("$nfs_home/$logs_subfolder/config_cifar_subsampling.ini" "$nfs_home/$logs_subfolder/config_cifar_sharing.ini" "$nfs_home/$logs_subfolder/config_cifar_waveletRandomAlpha.ini")
+#tests=("$nfs_home/$logs_subfolder/config_cifar_waveletRandomAlpha.ini")
 # Learning rates
-lr="0.001"
+lr="0.01"
 # Batch size
-batchsize="16"
+batchsize="8"
 # The number of communication rounds per global epoch
-comm_rounds_per_global_epoch="1"
+comm_rounds_per_global_epoch="20"
 procs=`expr $procs_per_machine \* $machines`
 echo procs: $procs
 # Celeba has 63741 samples
 # Reddit has 70642
 # Femnist 734463
-# Shakespeares 3678451, subsampled 678696
-# cifar 50000
-dataset_size=734463
+# Shakespeares 3678451
+dataset_size=50000
 # Calculating the number of samples that each user/proc will have on average
 samples_per_user=`expr $dataset_size / $procs`
 echo samples per user: $samples_per_user
-
 # random_seeds for which to rerun the experiments
-random_seeds=("97")
+# random_seeds=("90" "91" "92" "93" "94")
+random_seeds=("94")
 # random_seed = 97
 echo batchsize: $batchsize
 echo communication rounds per global epoch: $comm_rounds_per_global_epoch
@@ -85,10 +87,10 @@ echo iterations: $iterations
 batches_per_comm_round=$($env_python -c "from math import floor; x = floor($batches_per_epoch / $comm_rounds_per_global_epoch); print(1 if x==0 else x)")
 # since the batches per communication round were rounded down we need to change the number of iterations to reflect that
 new_iterations=$($env_python -c "from math import floor; tmp = floor($batches_per_epoch / $comm_rounds_per_global_epoch); x = 1 if tmp == 0 else tmp; y = floor((($batches_per_epoch / $comm_rounds_per_global_epoch)/x)*$iterations); print($iterations if y<$iterations else y)")
-echo batches per communication round: $batches_per_comm_round
-echo corrected iterations: $new_iterations
 test_after=$(($new_iterations / $global_epochs))
 echo test after: $test_after
+echo batches per communication round: $batches_per_comm_round
+echo corrected iterations: $new_iterations
 for i in "${tests[@]}"
 do
   for seed in "${random_seeds[@]}"
@@ -96,9 +98,14 @@ do
     echo $i
     IFS='_' read -ra NAMES <<< $i
     IFS='.' read -ra NAME <<< ${NAMES[-1]}
-    log_dir=$nfs_home$logs_subfolder/${NAME[0]}:lr=$lr:r=$comm_rounds_per_global_epoch:b=$batchsize:$(date '+%Y-%m-%dT%H:%M')/machine$m
-    echo results are stored in: $log_dir
+    #log_dir_base=$nfs_home$logs_subfolder/${NAME[0]}:lr=$lr:r=$comm_rounds_per_global_epoch:b=$batchsize:$(date '+%Y-%m-%dT%H:%M')
+    log_dir_base=$nfs_home/$logs_subfolder/lr=$lr:r=$comm_rounds_per_global_epoch:b=$batchsize:$(date '+%Y-%m-%dT%H:%M')
+    echo results are stored in: $log_dir_base
+    log_dir=$log_dir_base/machine$m
     mkdir -p $log_dir
+    weight_store_dir=$log_dir_base/weights
+    mkdir -p $weight_store_dir
+    graph=$nfs_home/decentralizepy/eval/96_regular.edges
     cp $i $config_file
     # changing the config files to reflect the values of the current grid search state
     $python_bin/crudini --set $config_file COMMUNICATION addresses_filepath $ip_machines
@@ -106,7 +113,11 @@ do
     $python_bin/crudini --set $config_file TRAIN_PARAMS rounds $batches_per_comm_round
     $python_bin/crudini --set $config_file TRAIN_PARAMS batch_size $batchsize
     $python_bin/crudini --set $config_file DATASET random_seed $seed
+    $python_bin/crudini --set $config_file COMMUNICATION addresses_filepath $ip_machines
+    $python_bin/crudini --set $config_file COMMUNICATION offset 10720
+    # $env_python $eval_file -cte 0 -ro 0 -tea $test_after -ld $log_dir -wsd $weight_store_dir -mid $m -ps $procs_per_machine -ms $machines -is $new_iterations -gf $graph -ta $test_after -cf $config_file -ll $log_level
     $env_python $eval_file -ro 0 -tea $test_after -ld $log_dir -mid $m -ps $procs_per_machine -ms $machines -is $new_iterations -gf $graph -ta $test_after -cf $config_file -ll $log_level
+
     echo $i is done
     sleep 200
     echo end of sleep

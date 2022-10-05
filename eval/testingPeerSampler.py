@@ -8,7 +8,9 @@ from torch import multiprocessing as mp
 from decentralizepy import utils
 from decentralizepy.graphs.Graph import Graph
 from decentralizepy.mappings.Linear import Linear
-from decentralizepy.node.DPSGDNode import DPSGDNode
+from decentralizepy.node.DPSGDWithPeerSampler import DPSGDWithPeerSampler
+from decentralizepy.node.PeerSampler import PeerSampler
+# from decentralizepy.node.PeerSamplerDynamic import PeerSamplerDynamic
 
 
 def read_ini(file_path):
@@ -50,29 +52,32 @@ if __name__ == "__main__":
     l = Linear(n_machines, procs_per_machine)
     m_id = args.machine_id
 
-    mp.spawn(
-        fn=DPSGDNode,
-        nprocs=procs_per_machine,
-        args=[
-            m_id,
-            l,
-            g,
-            my_config,
-            args.iterations,
-            args.log_dir,
-            args.weights_store_dir,
-            log_level[args.log_level],
-            args.test_after,
-            args.train_evaluate_after,
-            args.reset_optimizer,
-        ],
-    )
+    sm = args.server_machine
+    sr = args.server_rank
 
     processes = []
-    for r in range(procs_per_machine):
+    if sm == m_id:
         processes.append(
             mp.Process(
-                target=DPSGDNode,
+                # target=PeerSamplerDynamic,
+                target=PeerSampler,
+                args=[
+                    sr,
+                    m_id,
+                    l,
+                    g,
+                    my_config,
+                    args.iterations,
+                    args.log_dir,
+                    log_level[args.log_level],
+                ],
+            )
+        )
+
+    for r in range(0, procs_per_machine):
+        processes.append(
+            mp.Process(
+                target=DPSGDWithPeerSampler,
                 args=[
                     r,
                     m_id,

@@ -31,6 +31,9 @@ class SubSampling(Sharing):
         metadata_cap=1.0,
         pickle=True,
         layerwise=False,
+        compress=False,
+        compression_package=None,
+        compression_class=None,
     ):
         """
         Constructor
@@ -66,7 +69,17 @@ class SubSampling(Sharing):
 
         """
         super().__init__(
-            rank, machine_id, communication, mapping, graph, model, dataset, log_dir
+            rank,
+            machine_id,
+            communication,
+            mapping,
+            graph,
+            model,
+            dataset,
+            log_dir,
+            compress,
+            compression_package,
+            compression_class,
         )
         self.alpha = alpha
         self.dict_ordered = dict_ordered
@@ -215,7 +228,7 @@ class SubSampling(Sharing):
             m["alpha"] = alpha
             m["params"] = subsample.numpy()
 
-            return m
+            return self.compress_data(m)
 
     def deserialized_model(self, m):
         """
@@ -234,6 +247,8 @@ class SubSampling(Sharing):
         """
         if self.alpha > self.metadata_cap:  # Share fully
             return super().deserialized_model(m)
+
+        m = self.decompress_data(m)
 
         with torch.no_grad():
             state_dict = self.model.state_dict()

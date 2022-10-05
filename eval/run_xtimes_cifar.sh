@@ -41,9 +41,10 @@ graph=96_regular.edges
 config_file=~/tmp/config.ini
 procs_per_machine=16
 machines=6
-global_epochs=300
-eval_file=testing.py
+global_epochs=100
+eval_file=testingFederated.py
 log_level=INFO
+working_rate=0.1
 
 ip_machines=$nfs_home/configs/ip_addr_6Machines.json
 
@@ -51,7 +52,7 @@ m=`cat $ip_machines | grep $(/sbin/ifconfig ens785 | grep 'inet ' | awk '{print 
 export PYTHONFAULTHANDLER=1
 
 # Base configs for which the gird search is done
-tests=("step_configs/config_cifar_sharing.ini" "step_configs/config_cifar_partialmodel.ini" "step_configs/config_cifar_topkacc.ini" "step_configs/config_cifar_subsampling.ini" "step_configs/config_cifar_wavelet.ini")
+tests=("step_configs/config_cifar_sharing.ini")
 # Learning rates
 lr="0.01"
 # Batch size
@@ -66,7 +67,7 @@ samples_per_user=`expr $dataset_size / $procs`
 echo samples per user: $samples_per_user
 
 # random_seeds for which to rerun the experiments
-random_seeds=("90" "91" "92" "93" "94")
+random_seeds=("90")
 # random_seed = 97
 echo batchsize: $batchsize
 echo communication rounds per global epoch: $comm_rounds_per_global_epoch
@@ -91,7 +92,7 @@ do
     echo $i
     IFS='_' read -ra NAMES <<< $i
     IFS='.' read -ra NAME <<< ${NAMES[-1]}
-    log_dir_base=$nfs_home$logs_subfolder/${NAME[0]}:lr=$lr:r=$comm_rounds_per_global_epoch:b=$batchsize:$(date '+%Y-%m-%dT%H:%M')
+    log_dir_base=$nfs_home/$logs_subfolder/${NAME[0]}:lr=$lr:r=$comm_rounds_per_global_epoch:b=$batchsize:$(date '+%Y-%m-%dT%H:%M')
     echo results are stored in: $log_dir_base
     log_dir=$log_dir_base/machine$m
     mkdir -p $log_dir
@@ -104,7 +105,7 @@ do
     $python_bin/crudini --set $config_file TRAIN_PARAMS rounds $batches_per_comm_round
     $python_bin/crudini --set $config_file TRAIN_PARAMS batch_size $batchsize
     $python_bin/crudini --set $config_file DATASET random_seed $seed
-    $env_python $eval_file -ro 0 -tea $test_after -ld $log_dir -wsd $weight_store_dir -mid $m -ps $procs_per_machine -ms $machines -is $new_iterations -gf $graph -ta $test_after -cf $config_file -ll $log_level
+    $env_python $eval_file -ro 0 -tea $test_after -ld $log_dir -wsd $weight_store_dir -mid $m -ps $procs_per_machine -ms $machines -is $new_iterations -gf $graph -ta $test_after -cf $config_file -ll $log_level -wr $working_rate
     echo $i is done
     sleep 200
     echo end of sleep

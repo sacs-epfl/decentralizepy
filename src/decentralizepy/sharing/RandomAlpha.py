@@ -28,6 +28,9 @@ class RandomAlpha(PartialModel):
         save_accumulated="",
         change_transformer=identity,
         accumulate_averaging_changes=False,
+        compress=False,
+        compression_package=None,
+        compression_class=None,
     ):
         """
         Constructor
@@ -75,14 +78,17 @@ class RandomAlpha(PartialModel):
             save_accumulated,
             change_transformer,
             accumulate_averaging_changes,
+            compress,
+            compression_package,
+            compression_class,
         )
         self.alpha_list = eval(alpha_list)
         random.seed(self.mapping.get_uid(self.rank, self.machine_id))
 
-    def step(self):
+    def get_data_to_send(self):
         """
         Perform a sharing step. Implements D-PSGD with alpha randomly chosen.
 
         """
         self.alpha = random.choice(self.alpha_list)
-        super().step()
+        return super().get_data_to_send()

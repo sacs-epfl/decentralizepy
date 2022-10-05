@@ -1,4 +1,3 @@
-import importlib
 import json
 import logging
 import pickle
@@ -36,7 +35,8 @@ class TCP(Communication):
 
         """
         machine_addr = self.ip_addrs[str(machine_id)]
-        port = rank + self.offset
+        port = (2 * rank + 1) + self.offset
+        assert port > 0
         return "tcp://{}:{}".format(machine_addr, port)
 
     def __init__(
@@ -46,10 +46,7 @@ class TCP(Communication):
         mapping,
         total_procs,
         addresses_filepath,
-        compress=False,
-        offset=20000,
-        compression_package=None,
-        compression_class=None,
+        offset=9000,
     ):
         """
         Constructor
@@ -81,30 +78,19 @@ class TCP(Communication):
         self.rank = rank
         self.machine_id = machine_id
         self.mapping = mapping
-        self.offset = 20000 + offset
+        self.offset = offset
         self.uid = mapping.get_uid(rank, machine_id)
         self.identity = str(self.uid).encode()
         self.context = zmq.Context()
         self.router = self.context.socket(zmq.ROUTER)
         self.router.setsockopt(zmq.IDENTITY, self.identity)
         self.router.bind(self.addr(rank, machine_id))
-        self.sent_disconnections = False
-        self.compress = compress
-
-        if compression_package and compression_class:
-            compressor_module = importlib.import_module(compression_package)
-            compressor_class = getattr(compressor_module, compression_class)
-            self.compressor = compressor_class()
-            logging.info(f"Using the {compressor_class} to compress the data")
-        else:
-            assert not self.compress
 
         self.total_data = 0
         self.total_meta = 0
 
         self.peer_deque = deque()
         self.peer_sockets = dict()
-        self.barrier = set()
 
     def __del__(self):
         """
@@ -128,26 +114,12 @@ class TCP(Communication):
             Encoded data
 
         """
-        if self.compress:
-            if "indices" in data:
-                data["indices"] = self.compressor.compress(data["indices"])
-
-            assert "params" in data
-            data["params"] = self.compressor.compress_float(data["params"])
+        data_len = 0
+        if "params" in data:
             data_len = len(pickle.dumps(data["params"]))
-            output = pickle.dumps(data)
-
-            # the compressed meta data gets only a few bytes smaller after pickling
-            self.total_meta += len(output) - data_len
-            self.total_data += data_len
-        else:
-            output = pickle.dumps(data)
-            # centralized testing uses its own instance
-            if type(data) == dict:
-                assert "params" in data
-                data_len = len(pickle.dumps(data["params"]))
-                self.total_meta += len(output) - data_len
-                self.total_data += data_len
+        output = pickle.dumps(data)
+        self.total_meta += len(output) - data_len
+        self.total_data += data_len
         return output
 
     def decrypt(self, sender, data):
@@ -168,63 +140,35 @@ class TCP(Communication):
 
         """
         sender = int(sender.decode())
-        if self.compress:
-            data = pickle.loads(data)
-            if "indices" in data:
-                data["indices"] = self.compressor.decompress(data["indices"])
-            if "params" in data:
-                data["params"] = self.compressor.decompress_float(data["params"])
-        else:
-            data = pickle.loads(data)
+        data = pickle.loads(data)
         return sender, data
 
-    def connect_neighbors(self, neighbors):
+    def init_connection(self, neighbor):
         """
-        Connects all neighbors. Sends HELLO. Waits for HELLO.
-        Caches any data received while waiting for HELLOs.
+        Initiates a socket to a given node.
 
         Parameters
         ----------
-        neighbors : list(int)
-            List of neighbors
-
-        Raises
-        ------
-        RuntimeError
-            If received BYE while waiting for HELLO
+        neighbor : int
+            neighbor to connect to
 
         """
-        logging.info("Sending connection request to neighbors")
-        for uid in neighbors:
-            logging.debug("Connecting to my neighbour: {}".format(uid))
-            id = str(uid).encode()
-            req = self.context.socket(zmq.DEALER)
-            req.setsockopt(zmq.IDENTITY, self.identity)
-            req.connect(self.addr(*self.mapping.get_machine_and_rank(uid)))
-            self.peer_sockets[id] = req
-            req.send(HELLO)
+        logging.debug("Connecting to my neighbour: {}".format(neighbor))
+        id = str(neighbor).encode()
+        req = self.context.socket(zmq.DEALER)
+        req.setsockopt(zmq.IDENTITY, self.identity)
+        req.connect(self.addr(*self.mapping.get_machine_and_rank(neighbor)))
+        self.peer_sockets[id] = req
 
-        num_neighbors = len(neighbors)
-        while len(self.barrier) < num_neighbors:
-            sender, recv = self.router.recv_multipart()
+    def destroy_connection(self, neighbor, linger=None):
+        id = str(neighbor).encode()
+        if self.already_connected(neighbor):
+            self.peer_sockets[id].close(linger=linger)
+            del self.peer_sockets[id]
 
-            if recv == HELLO:
-                logging.debug("Received {} from {}".format(HELLO, sender))
-                self.barrier.add(sender)
-            elif recv == BYE:
-                logging.debug("Received {} from {}".format(BYE, sender))
-                raise RuntimeError(
-                    "A neighbour wants to disconnect before training started!"
-                )
-            else:
-                logging.debug(
-                    "Received message from {} @ connect_neighbors".format(sender)
-                )
-
-                self.peer_deque.append(self.decrypt(sender, recv))
-
-        logging.info("Connected to all neighbors")
-        self.initialized = True
+    def already_connected(self, neighbor):
+        id = str(neighbor).encode()
+        return id in self.peer_sockets
 
     def receive(self):
         """
@@ -241,25 +185,10 @@ class TCP(Communication):
             If received HELLO
 
         """
-        assert self.initialized == True
-        if len(self.peer_deque) != 0:
-            resp = self.peer_deque.popleft()
-            return resp
 
         sender, recv = self.router.recv_multipart()
-
-        if recv == HELLO:
-            logging.debug("Received {} from {}".format(HELLO, sender))
-            raise RuntimeError(
-                "A neighbour wants to connect when everyone is connected!"
-            )
-        elif recv == BYE:
-            logging.debug("Received {} from {}".format(BYE, sender))
-            self.barrier.remove(sender)
-            return self.receive()
-        else:
-            logging.debug("Received message from {}".format(sender))
-            return self.decrypt(sender, recv)
+        s, r = self.decrypt(sender, recv)
+        return s, r
 
     def send(self, uid, data, encrypt=True):
         """
@@ -273,7 +202,6 @@ class TCP(Communication):
             Message as a Python dictionary
 
         """
-        assert self.initialized == True
         if encrypt:
             to_send = self.encrypt(data)
         else:
@@ -283,28 +211,4 @@ class TCP(Communication):
         id = str(uid).encode()
         self.peer_sockets[id].send(to_send)
         logging.debug("{} sent the message to {}.".format(self.uid, uid))
-        logging.info("Sent this round: {}".format(data_size))
-
-    def disconnect_neighbors(self):
-        """
-        Disconnects all neighbors.
-
-        """
-        assert self.initialized == True
-        if not self.sent_disconnections:
-            logging.info("Disconnecting neighbors")
-            for sock in self.peer_sockets.values():
-                sock.send(BYE)
-            self.sent_disconnections = True
-            while len(self.barrier):
-                sender, recv = self.router.recv_multipart()
-                if recv == BYE:
-                    logging.debug("Received {} from {}".format(BYE, sender))
-                    self.barrier.remove(sender)
-                else:
-                    logging.critical(
-                        "Received unexpected {} from {}".format(recv, sender)
-                    )
-                    raise RuntimeError(
-                        "Received a message when expecting BYE from {}".format(sender)
-                    )
+        logging.info("Sent message size: {}".format(data_size))

@@ -23,7 +23,7 @@ def plot(x_axis, means, stdevs, pos, nb_plots, title, label, loc, xlabel):
 
 
 def plot_results(path, epochs, global_epochs="True"):
-    if global_epochs.lower() in ['true', '1', 't', 'y', 'yes']:
+    if global_epochs.lower() in ["true", "1", "t", "y", "yes"]:
         global_epochs = True
     else:
         global_epochs = False
@@ -52,10 +52,12 @@ def plot_results(path, epochs, global_epochs="True"):
         if global_epochs:
             rounds = results_csv["rounds"].iloc[0]
             print("Rounds: ", rounds)
-            results_cr = results_csv[results_csv.rounds <= epochs*rounds]
+            results_cr = results_csv[results_csv.rounds <= epochs * rounds]
             means = results_cr["mean"].to_numpy()
             stdevs = results_cr["std"].to_numpy()
-            x_axis = results_cr["rounds"].to_numpy() / rounds # list(np.arange(0, len(means), 1))
+            x_axis = (
+                results_cr["rounds"].to_numpy() / rounds
+            )  # list(np.arange(0, len(means), 1))
             x_label = "global epochs"
         else:
             results_cr = results_csv[results_csv.rounds <= epochs]
@@ -85,10 +87,12 @@ def plot_results(path, epochs, global_epochs="True"):
         if global_epochs:
             rounds = results_csv["rounds"].iloc[0]
             print("Rounds: ", rounds)
-            results_cr = results_csv[results_csv.rounds <= epochs*rounds]
+            results_cr = results_csv[results_csv.rounds <= epochs * rounds]
             means = results_cr["mean"].to_numpy()
             stdevs = results_cr["std"].to_numpy()
-            x_axis = results_cr["rounds"].to_numpy() / rounds # list(np.arange(0, len(means), 1))
+            x_axis = (
+                results_cr["rounds"].to_numpy() / rounds
+            )  # list(np.arange(0, len(means), 1))
             x_label = "global epochs"
         else:
             results_cr = results_csv[results_csv.rounds <= epochs]
@@ -120,10 +124,12 @@ def plot_results(path, epochs, global_epochs="True"):
         if global_epochs:
             rounds = results_csv["rounds"].iloc[0]
             print("Rounds: ", rounds)
-            results_cr = results_csv[results_csv.rounds <= epochs*rounds]
+            results_cr = results_csv[results_csv.rounds <= epochs * rounds]
             means = results_cr["mean"].to_numpy()
             stdevs = results_cr["std"].to_numpy()
-            x_axis = results_cr["rounds"].to_numpy() / rounds # list(np.arange(0, len(means), 1))
+            x_axis = (
+                results_cr["rounds"].to_numpy() / rounds
+            )  # list(np.arange(0, len(means), 1))
             x_label = "global epochs"
         else:
             results_cr = results_csv[results_csv.rounds <= epochs]

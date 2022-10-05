@@ -29,16 +29,17 @@ def get_stats(l):
 def plot(means, stdevs, mins, maxs, title, label, loc):
     plt.title(title)
     plt.xlabel("communication rounds")
-    x_axis = list(means.keys())
-    y_axis = list(means.values())
-    err = list(stdevs.values())
-    plt.errorbar(x_axis, y_axis, yerr=err, label=label)
+    x_axis = np.array(list(means.keys()))
+    y_axis = np.array(list(means.values()))
+    err = np.array(list(stdevs.values()))
+    plt.plot(x_axis, y_axis, label=label)
+    plt.fill_between(x_axis, y_axis - err, y_axis + err, alpha=0.4)
     plt.legend(loc=loc)
 
 
 def plot_results(path, centralized, data_machine="machine0", data_node=0):
     folders = os.listdir(path)
-    if centralized.lower() in ['true', '1', 't', 'y', 'yes']:
+    if centralized.lower() in ["true", "1", "t", "y", "yes"]:
         centralized = True
         print("Centralized")
     else:
@@ -66,7 +67,10 @@ def plot_results(path, centralized, data_machine="machine0", data_node=0):
                 filepath = os.path.join(mf_path, f)
                 with open(filepath, "r") as inf:
                     results.append(json.load(inf))
-
+        if folder.startswith("FL") or folder.startswith("Parameter Server"):
+            data_node = -1
+        else:
+            data_node = 0
         with open(folder_path / data_machine / f"{data_node}_results.json", "r") as f:
             main_data = json.load(f)
         main_data = [main_data]
@@ -124,23 +128,7 @@ def plot_results(path, centralized, data_machine="machine0", data_node=0):
         df.to_csv(
             os.path.join(path, "test_acc_" + folder + ".csv"), index_label="rounds"
         )
-        plt.figure(6)
-        means, stdevs, mins, maxs = get_stats([x["grad_std"] for x in results])
-        plot(
-            means,
-            stdevs,
-            mins,
-            maxs,
-            "Gradient Variation over Nodes",
-            folder,
-            "upper right",
-        )
-        # Plot Testing loss
-        plt.figure(7)
-        means, stdevs, mins, maxs = get_stats([x["grad_mean"] for x in results])
-        plot(
-            means, stdevs, mins, maxs, "Gradient Magnitude Mean", folder, "upper right"
-        )
+
         # Collect total_bytes shared
         bytes_list = []
         for x in results:
@@ -149,6 +137,7 @@ def plot_results(path, centralized, data_machine="machine0", data_node=0):
         means, stdevs, mins, maxs = get_stats(bytes_list)
         bytes_means[folder] = list(means.values())[0]
         bytes_stdevs[folder] = list(stdevs.values())[0]
+        print(bytes_list)
 
         meta_list = []
         for x in results:
@@ -175,10 +164,6 @@ def plot_results(path, centralized, data_machine="machine0", data_node=0):
     plt.savefig(os.path.join(path, "test_loss.png"), dpi=300)
     plt.figure(3)
     plt.savefig(os.path.join(path, "test_acc.png"), dpi=300)
-    plt.figure(6)
-    plt.savefig(os.path.join(path, "grad_std.png"), dpi=300)
-    plt.figure(7)
-    plt.savefig(os.path.join(path, "grad_mean.png"), dpi=300)
     # Plot total_bytes
     plt.figure(4)
     plt.title("Data Shared")
@@ -257,5 +242,6 @@ if __name__ == "__main__":
     # The args are:
     # 1: the folder with the data
     # 2: True/False: If True then the evaluation on the test set was centralized
+    # for federated learning folder name must start with "FL"!
     plot_results(sys.argv[1], sys.argv[2])
     # plot_parameters(sys.argv[1])

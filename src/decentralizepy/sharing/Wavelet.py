@@ -1,8 +1,6 @@
 import json
 import logging
 import os
-from pathlib import Path
-from time import time
 
 import numpy as np
 import pywt
@@ -61,6 +59,9 @@ class Wavelet(PartialModel):
         save_accumulated="",
         accumulation=False,
         accumulate_averaging_changes=False,
+        compress=False,
+        compression_package=None,
+        compression_class=None,
     ):
         """
         Constructor
@@ -125,6 +126,9 @@ class Wavelet(PartialModel):
             save_accumulated,
             lambda x: change_transformer_wavelet(x, wavelet, level),
             accumulate_averaging_changes,
+            compress,
+            compression_package,
+            compression_class,
         )
 
         self.change_based_selection = change_based_selection
@@ -185,7 +189,7 @@ class Wavelet(PartialModel):
                 self.model.accumulated_changes = torch.zeros_like(
                     self.model.accumulated_changes
                 )
-            return m
+            return self.compress_data(m)
 
         with torch.no_grad():
             topk, indices = self.apply_wavelet()
@@ -199,7 +203,8 @@ class Wavelet(PartialModel):
                     shapes[k] = list(v.shape)
                 shared_params["shapes"] = shapes
 
-                shared_params[self.communication_round] = indices.tolist()  # is slow
+                # is slow
+                shared_params[self.communication_round] = indices.tolist()
 
                 shared_params["alpha"] = self.alpha
 
@@ -223,7 +228,7 @@ class Wavelet(PartialModel):
 
             m["send_partial"] = True
 
-            return m
+            return self.compress_data(m)
 
     def deserialized_model(self, m):
         """
@@ -240,6 +245,7 @@ class Wavelet(PartialModel):
             state_dict of received
 
         """
+        m = self.decompress_data(m)
         ret = dict()
         if "send_partial" not in m:
             params = m["params"]
@@ -260,7 +266,7 @@ class Wavelet(PartialModel):
             ret["send_partial"] = True
         return ret
 
-    def _averaging(self):
+    def _averaging(self, peer_deques):
         """
         Averages the received model with the local model
 
@@ -269,8 +275,12 @@ class Wavelet(PartialModel):
             total = None
             weight_total = 0
             wt_params = self.pre_share_model_transformed
-            for i, n in enumerate(self.peer_deques):
-                degree, iteration, data = self.peer_deques[n].popleft()
+            for i, n in enumerate(peer_deques):
+                data = peer_deques[n].popleft()
+                degree, iteration = data["degree"], data["iteration"]
+                del data["degree"]
+                del data["iteration"]
+                del data["CHANNEL"]
                 logging.debug(
                     "Averaging model from neighbor {} of iteration {}".format(
                         n, iteration
@@ -287,7 +297,8 @@ class Wavelet(PartialModel):
                 else:
                     topkwf = params.reshape(self.wt_shape)
 
-                weight = 1 / (max(len(self.peer_deques), degree) + 1)  # Metro-Hastings
+                # Metro-Hastings
+                weight = 1 / (max(len(peer_deques), degree) + 1)
                 weight_total += weight
                 if total is None:
                     total = weight * topkwf
@@ -314,3 +325,61 @@ class Wavelet(PartialModel):
                 start_index = end_index
 
         self.model.load_state_dict(std_dict)
+        self._post_step()
+        self.communication_round += 1
+
+    def _averaging_server(self, peer_deques):
+        """
+        Averages the received models of all working nodes
+
+        """
+        with torch.no_grad():
+            total = None
+            wt_params = self.pre_share_model_transformed
+            for i, n in enumerate(peer_deques):
+                data = peer_deques[n].popleft()
+                degree, iteration = data["degree"], data["iteration"]
+                del data["degree"]
+                del data["iteration"]
+                del data["CHANNEL"]
+                logging.debug(
+                    "Averaging model from neighbor {} of iteration {}".format(
+                        n, iteration
+                    )
+                )
+                data = self.deserialized_model(data)
+                params = data["params"]
+                if "indices" in data:
+                    indices = data["indices"]
+                    # use local data to complement
+                    topkwf = wt_params.clone().detach()
+                    topkwf[indices] = params
+                    topkwf = topkwf.reshape(self.wt_shape)
+                else:
+                    topkwf = params.reshape(self.wt_shape)
+
+                weight = 1 / len(peer_deques)
+                if total is None:
+                    total = weight * topkwf
+                else:
+                    total += weight * topkwf
+
+            avg_wf_params = pywt.array_to_coeffs(
+                total.numpy(), self.coeff_slices, output_format="wavedec"
+            )
+            reverse_total = torch.from_numpy(
+                pywt.waverec(avg_wf_params, wavelet=self.wavelet)
+            )
+
+            start_index = 0
+            std_dict = {}
+            for i, key in enumerate(self.model.state_dict()):
+                end_index = start_index + self.lens[i]
+                std_dict[key] = reverse_total[start_index:end_index].reshape(
+                    self.shapes[i]
+                )
+                start_index = end_index
+
+        self.model.load_state_dict(std_dict)
+        self._post_step()
+        self.communication_round += 1
