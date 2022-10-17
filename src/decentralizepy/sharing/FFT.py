@@ -49,7 +49,7 @@ class FFT(PartialModel):
         metadata_cap=1.0,
         change_based_selection=True,
         save_accumulated="",
-        accumulation=True,
+        accumulation=False,
         accumulate_averaging_changes=False,
         compress=False,
         compression_package=None,

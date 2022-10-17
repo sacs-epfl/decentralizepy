@@ -137,7 +137,6 @@ def plot_results(path, centralized, data_machine="machine0", data_node=0):
         means, stdevs, mins, maxs = get_stats(bytes_list)
         bytes_means[folder] = list(means.values())[0]
         bytes_stdevs[folder] = list(stdevs.values())[0]
-        print(bytes_list)
 
         meta_list = []
         for x in results:
