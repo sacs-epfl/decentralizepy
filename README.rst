@@ -26,10 +26,14 @@ Setting up decentralizepy
     pip install --upgrade pip
 
 * On Mac M1, installing ``pyzmq`` fails with `pip`. Use `conda <https://conda.io>`_.
-* Install decentralizepy for development. ::
+* Install decentralizepy for development. (zsh) ::
 
     pip3 install --editable .\[dev\]
     
+* Install decentralizepy for development. (bash) ::
+
+    pip3 install --editable .[dev]
+ 
 ----------------
 Running the code
 ----------------
