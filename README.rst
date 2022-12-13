@@ -2,6 +2,9 @@
 decentralizepy
 ==============
 
+decentralizepy is a framework for running distributed applications (particularly ML) on top of arbitrary topologies (decentralized, federated, parameter server).
+It was primarily conceived for assessing scientific ideas on several aspects of distributed learning (communication efficiency, privacy, data heterogeneity etc.).
+
 -------------------------
 Setting up decentralizepy
 -------------------------
