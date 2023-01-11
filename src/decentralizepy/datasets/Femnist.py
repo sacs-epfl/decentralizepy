@@ -223,6 +223,8 @@ class Femnist(Dataset):
             test_batch_size,
         )
 
+        self.num_classes = NUM_CLASSES
+
         if self.__training__:
             self.load_trainset()
 

@@ -230,6 +230,8 @@ class Celeba(Dataset):
         self.IMAGES_DIR = utils.conditional_value(images_dir, "", None)
         assert self.IMAGES_DIR != None
 
+        self.num_classes = NUM_CLASSES
+
         if self.__training__:
             self.load_trainset()
 

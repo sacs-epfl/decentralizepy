@@ -114,6 +114,8 @@ class CIFAR10(Dataset):
             test_batch_size,
         )
 
+        self.num_classes = NUM_CLASSES
+
         self.partition_niid = partition_niid
         self.shards = shards
         self.transform = transforms.Compose(

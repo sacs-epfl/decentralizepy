@@ -52,6 +52,7 @@ class Dataset:
         self.test_dir = utils.conditional_value(test_dir, "", None)
         self.sizes = utils.conditional_value(sizes, "", None)
         self.test_batch_size = utils.conditional_value(test_batch_size, "", 64)
+        self.num_classes = None
         if self.sizes:
             if type(self.sizes) == str:
                 self.sizes = eval(self.sizes)
@@ -65,6 +66,20 @@ class Dataset:
             self.__testing__ = True
         else:
             self.__testing__ = False
+
+        self.label_distribution = None
+
+    def get_label_distribution(self):
+        # Only supported for classification
+        if self.label_distribution == None:
+            self.label_distribution = [0 for _ in range(self.num_classes)]
+            tr_set = self.get_trainset()
+            for _, ys in tr_set:
+                for y in ys:
+                    y_val = y.item()
+                    self.label_distribution[y_val] += 1
+
+        return self.label_distribution
 
     def get_trainset(self):
         """
