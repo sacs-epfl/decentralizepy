@@ -47,6 +47,7 @@ class TCP(Communication):
         total_procs,
         addresses_filepath,
         offset=9000,
+        recv_timeout=50,
     ):
         """
         Constructor
@@ -79,11 +80,14 @@ class TCP(Communication):
         self.machine_id = machine_id
         self.mapping = mapping
         self.offset = offset
+        self.recv_timeout = recv_timeout
         self.uid = mapping.get_uid(rank, machine_id)
         self.identity = str(self.uid).encode()
         self.context = zmq.Context()
         self.router = self.context.socket(zmq.ROUTER)
         self.router.setsockopt(zmq.IDENTITY, self.identity)
+        self.router.setsockopt(zmq.RCVTIMEO, self.recv_timeout)
+        self.router.setsockopt(zmq.ROUTER_MANDATORY, 1)
         self.router.bind(self.addr(rank, machine_id))
 
         self.total_data = 0
@@ -170,7 +174,7 @@ class TCP(Communication):
         id = str(neighbor).encode()
         return id in self.peer_sockets
 
-    def receive(self):
+    def receive(self, block=True):
         """
         Returns ONE message received.
 
@@ -185,10 +189,19 @@ class TCP(Communication):
             If received HELLO
 
         """
-
-        sender, recv = self.router.recv_multipart()
-        s, r = self.decrypt(sender, recv)
-        return s, r
+        while True:
+            try:
+                sender, recv = self.router.recv_multipart()
+                s, r = self.decrypt(sender, recv)
+                return s, r
+            except zmq.ZMQError as exc:
+                if exc.errno == zmq.EAGAIN:
+                    if not block:
+                        return None
+                    else:
+                        continue
+                else:
+                    raise
 
     def send(self, uid, data, encrypt=True):
         """

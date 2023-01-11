@@ -26,14 +26,19 @@ class Node:
         self.communication.init_connection(neighbor)
         self.communication.send(neighbor, {"HELLO": self.uid, "CHANNEL": "CONNECT"})
 
-    def receive_channel(self, channel):
+    def receive_channel(self, channel, block=True):
         if channel not in self.message_queue:
             self.message_queue[channel] = deque()
 
         if len(self.message_queue[channel]) > 0:
             return self.message_queue[channel].popleft()
         else:
-            sender, recv = self.communication.receive()
+            x = self.communication.receive(block=block)
+            if x == None:
+                assert not block
+                return None
+            sender, recv = x
+
             logging.info(
                 "Received some message from {} with CHANNEL: {}".format(
                     sender, recv["CHANNEL"]
@@ -44,7 +49,11 @@ class Node:
                 if recv["CHANNEL"] not in self.message_queue:
                     self.message_queue[recv["CHANNEL"]] = deque()
                 self.message_queue[recv["CHANNEL"]].append((sender, recv))
-                sender, recv = self.communication.receive()
+                x = self.communication.receive(block=block)
+                if x == None:
+                    assert not block
+                    return None
+                sender, recv = x
                 logging.info(
                     "Received some message from {} with CHANNEL: {}".format(
                         sender, recv["CHANNEL"]

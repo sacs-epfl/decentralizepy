@@ -10,7 +10,6 @@ from decentralizepy.graphs.Graph import Graph
 from decentralizepy.mappings.Linear import Linear
 from decentralizepy.node.DPSGDWithPeerSampler import DPSGDWithPeerSampler
 from decentralizepy.node.PeerSampler import PeerSampler
-# from decentralizepy.node.PeerSamplerDynamic import PeerSamplerDynamic
 
 
 def read_ini(file_path):
