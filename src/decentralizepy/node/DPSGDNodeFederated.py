@@ -28,7 +28,7 @@ class DPSGDNodeFederated(Node):
             sender, data = self.receive_channel("WORKER_REQUEST")
 
             if "BYE" in data:
-                logging.info("Received {} from {}".format("BYE", sender))
+                logging.debug("Received {} from {}".format("BYE", sender))
                 self.barrier.remove(sender)
                 break
 
@@ -40,7 +40,7 @@ class DPSGDNodeFederated(Node):
             self.sharing._post_step()
             self.sharing.communication_round += 1
 
-            logging.info(
+            logging.debug(
                 "Received worker request at node {}, global iteration {}, local round {}".format(
                     self.uid, iteration, self.participated
                 )
@@ -154,9 +154,9 @@ class DPSGDNodeFederated(Node):
         self.reset_optimizer = reset_optimizer
         self.sent_disconnections = False
 
-        logging.info("Rank: %d", self.rank)
-        logging.info("type(graph): %s", str(type(self.rank)))
-        logging.info("type(mapping): %s", str(type(self.mapping)))
+        logging.debug("Rank: %d", self.rank)
+        logging.debug("type(graph): %s", str(type(self.rank)))
+        logging.debug("type(mapping): %s", str(type(self.mapping)))
 
     def init_comm(self, comm_configs):
         """

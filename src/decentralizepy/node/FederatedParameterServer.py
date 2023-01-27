@@ -119,9 +119,9 @@ class FederatedParameterServer(Node):
         self.test_after = test_after
         self.train_evaluate_after = train_evaluate_after
 
-        logging.info("Rank: %d", self.rank)
-        logging.info("type(graph): %s", str(type(self.rank)))
-        logging.info("type(mapping): %s", str(type(self.mapping)))
+        logging.debug("Rank: %d", self.rank)
+        logging.debug("type(graph): %s", str(type(self.rank)))
+        logging.debug("type(mapping): %s", str(type(self.mapping)))
 
     def init_comm(self, comm_configs):
         """
@@ -300,7 +300,7 @@ class FederatedParameterServer(Node):
                     self.peer_deques[sender] = deque()
                 self.peer_deques[sender].append(data)
 
-            logging.info("Received from all current workers")
+            logging.debug("Received from all current workers")
 
             # Average received updates
             averaging_deque = dict()

@@ -112,7 +112,7 @@ class TopKNormalized(PartialModel):
 
         """
 
-        logging.info("Returning topk gradients")
+        logging.debug("Returning topk gradients")
         G_topk = torch.abs(self.model.model_change)
         G_topk_normalized = G_topk / (torch.abs(self.pre_share_model) + self.epsilon)
         std, mean = torch.std_mean(G_topk, unbiased=False)

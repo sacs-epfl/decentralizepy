@@ -105,7 +105,7 @@ class TopKParams(Sharing):
 
         """
 
-        logging.info("Returning TopKParams gradients")
+        logging.debug("Returning TopKParams gradients")
         values_list = []
         index_list = []
         offsets = [0]
@@ -161,9 +161,9 @@ class TopKParams(Sharing):
                 ) as of:
                     json.dump(shared_params, of)
 
-            logging.info("Extracting topk params")
+            logging.debug("Extracting topk params")
 
-            logging.info("Generating dictionary to send")
+            logging.debug("Generating dictionary to send")
 
             m = dict()
 
@@ -175,14 +175,14 @@ class TopKParams(Sharing):
             m["offsets"] = offsets
 
             assert len(m["indices"]) == len(m["params"])
-            logging.info("Elements sending: {}".format(len(m["indices"])))
+            logging.debug("Elements sending: {}".format(len(m["indices"])))
 
-            logging.info("Generated dictionary to send")
+            logging.debug("Generated dictionary to send")
 
             # for key in m:
             #    m[key] = json.dumps(m[key])
 
-            logging.info("Converted dictionary to json")
+            logging.debug("Converted dictionary to json")
 
             return self.compress_data(m)
 

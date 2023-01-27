@@ -107,7 +107,7 @@ class LowerBoundTopK(PartialModel):
         if self.lower_bound == 0.0:
             return super().extract_top_gradients()
 
-        logging.info("Returning topk gradients bounded")
+        logging.debug("Returning topk gradients bounded")
         G_topk = torch.abs(self.model.model_change)
         std, mean = torch.std_mean(G_topk, unbiased=False)
         self.std = std.item()
@@ -127,7 +127,7 @@ class LowerBoundTopK(PartialModel):
                 ind_small.numpy(), ind.numpy(), assume_unique=True
             )
             take_max = round(self.lower_bound * self.alpha * G_topk.shape[0])
-            logging.info(
+            logging.debug(
                 "lower: %i %i %i", len(ind_small), len(ind_small_unique), take_max
             )
             if take_max > ind_small_unique.shape[0]:
@@ -135,7 +135,7 @@ class LowerBoundTopK(PartialModel):
             to_take = torch.rand(ind_small_unique.shape[0])
             _, ind_of_to_take = torch.topk(to_take, take_max, dim=0, sorted=False)
             ind_bound = torch.from_numpy(ind_small_unique)[ind_of_to_take]
-            logging.info("lower bounding: %i %i", len(ind), len(ind_bound))
+            logging.debug("lower bounding: %i %i", len(ind), len(ind_bound))
             # val = torch.concat(val, G_topk[ind_bound]) # not really needed, as thes are abs values and not further used
             ind = torch.cat([ind, ind_bound])
 
@@ -224,7 +224,6 @@ class LowerBoundTopK(PartialModel):
                     total[key] = T[start_index:end_index].reshape(self.shapes[i])
                     start_index = end_index
 
-            logging.info("new averaging")
             self.model.load_state_dict(total)
             self._post_step()
             self.communication_round += 1

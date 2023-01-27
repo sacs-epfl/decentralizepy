@@ -90,7 +90,7 @@ class TopKPlusRandom(PartialModel):
             (a,b). a: The magnitudes of the topK gradients, b: Their indices.
 
         """
-        logging.info("Returning topk gradients")
+        logging.debug("Returning topk gradients")
         G = torch.abs(self.model.model_change)
         std, mean = torch.std_mean(G, unbiased=False)
         self.std = std.item()

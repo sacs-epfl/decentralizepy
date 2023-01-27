@@ -151,7 +151,7 @@ class Wavelet(PartialModel):
 
         """
 
-        logging.info("Returning wavelet compressed model weights")
+        logging.debug("Returning wavelet compressed model weights")
         data = self.pre_share_model_transformed
         if self.change_based_selection:
             diff = self.model.model_change

@@ -130,7 +130,7 @@ class FFT(PartialModel):
 
         """
 
-        logging.info("Returning fft compressed model weights")
+        logging.debug("Returning fft compressed model weights")
         with torch.no_grad():
 
             flat_fft = self.pre_share_model_transformed

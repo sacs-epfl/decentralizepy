@@ -70,11 +70,11 @@ class RoundRobinPartial(Sharing):
         self.alpha = alpha
         random.seed(self.mapping.get_uid(rank, machine_id))
         n_params = self.model.count_params()
-        logging.info("Total number of parameters: {}".format(n_params))
+        logging.debug("Total number of parameters: {}".format(n_params))
         self.block_size = math.ceil(self.alpha * n_params)
-        logging.info("Block_size: {}".format(self.block_size))
+        logging.debug("Block_size: {}".format(self.block_size))
         self.num_blocks = math.ceil(n_params / self.block_size)
-        logging.info("Total number of blocks: {}".format(n_params))
+        logging.debug("Total number of blocks: {}".format(n_params))
         self.current_block = random.randint(0, self.num_blocks - 1)
 
     def serialized_model(self):
@@ -89,7 +89,7 @@ class RoundRobinPartial(Sharing):
         """
 
         with torch.no_grad():
-            logging.info("Extracting params to send")
+            logging.debug("Extracting params to send")
 
             tensors_to_cat = [v.data.flatten() for v in self.model.parameters()]
             T = torch.cat(tensors_to_cat, dim=0)
@@ -98,8 +98,8 @@ class RoundRobinPartial(Sharing):
             self.current_block = (self.current_block + 1) % self.num_blocks
             T_send = T[block_start:block_end]
             self.model.shared_parameters_counter[block_start:block_end] += 1
-            logging.info("Range sending: {}-{}".format(block_start, block_end))
-            logging.info("Generating dictionary to send")
+            logging.debug("Range sending: {}-{}".format(block_start, block_end))
+            logging.debug("Generating dictionary to send")
 
             m = dict()
 
@@ -108,14 +108,14 @@ class RoundRobinPartial(Sharing):
 
             m["params"] = T_send.numpy().tolist()
 
-            logging.info("Elements sending: {}".format(len(m["params"])))
+            logging.debug("Elements sending: {}".format(len(m["params"])))
 
-            logging.info("Generated dictionary to send")
+            logging.debug("Generated dictionary to send")
 
             for key in m:
                 m[key] = json.dumps(m[key])
 
-            logging.info("Converted dictionary to json")
+            logging.debug("Converted dictionary to json")
             self.total_data += len(self.communication.encrypt(m["params"]))
             return self.compress_data(m)
 

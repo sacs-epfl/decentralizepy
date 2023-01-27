@@ -100,7 +100,7 @@ class SubSampling(Sharing):
         self.pickle = pickle
         self.layerwise = layerwise
 
-        logging.info("subsampling pickling=" + str(pickle))
+        logging.debug("subsampling pickling=" + str(pickle))
 
         if self.save_shared:
             # Only save for 2 procs: Save space
@@ -136,7 +136,7 @@ class SubSampling(Sharing):
 
         """
 
-        logging.info("Returning subsampling gradients")
+        logging.debug("Returning subsampling gradients")
         if not self.layerwise:
             tensors_to_cat = [
                 v.data.flatten() for _, v in self.model.state_dict().items()

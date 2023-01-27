@@ -8,8 +8,7 @@ from torch import multiprocessing as mp
 from decentralizepy import utils
 from decentralizepy.graphs.Graph import Graph
 from decentralizepy.mappings.Linear import Linear
-from decentralizepy.node.DPSGDWithPeerSampler import DPSGDWithPeerSampler
-from decentralizepy.node.PeerSampler import PeerSampler
+from decentralizepy.node.KFNNode import KFNNode
 
 
 def read_ini(file_path):
@@ -51,31 +50,11 @@ if __name__ == "__main__":
     l = Linear(n_machines, procs_per_machine)
     m_id = args.machine_id
 
-    sm = args.server_machine
-    sr = args.server_rank
-
     processes = []
-    if sm == m_id:
+    for r in range(procs_per_machine):
         processes.append(
             mp.Process(
-                target=PeerSampler,
-                args=[
-                    sr,
-                    m_id,
-                    l,
-                    g,
-                    my_config,
-                    args.iterations,
-                    args.log_dir,
-                    log_level[args.log_level],
-                ],
-            )
-        )
-
-    for r in range(0, procs_per_machine):
-        processes.append(
-            mp.Process(
-                target=DPSGDWithPeerSampler,
+                target=KFNNode,
                 args=[
                     r,
                     m_id,

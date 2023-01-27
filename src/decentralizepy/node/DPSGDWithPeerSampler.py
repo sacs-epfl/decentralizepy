@@ -20,7 +20,7 @@ class DPSGDWithPeerSampler(DPSGDNode):
         return self.receive_channel("PEERS")[1]["NEIGHBORS"]
 
     def get_neighbors(self, node=None):
-        logging.info("Requesting neighbors from the peer sampler.")
+        logging.debug("Requesting neighbors from the peer sampler.")
         self.communication.send(
             self.peer_sampler_uid,
             {
@@ -30,7 +30,7 @@ class DPSGDWithPeerSampler(DPSGDNode):
             },
         )
         my_neighbors = self.receive_neighbors()
-        logging.info("Neighbors this round: {}".format(my_neighbors))
+        logging.debug("Neighbors this round: {}".format(my_neighbors))
         return my_neighbors
 
     def __init__(

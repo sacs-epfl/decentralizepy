@@ -1,59 +1,44 @@
-import importlib
 import json
 import logging
 import math
 import os
+import queue
 from collections import deque
+from random import Random
+from threading import Lock, Thread
 
+import numpy as np
 import torch
-from matplotlib import pyplot as plt
+from numpy.linalg import norm
 
 from decentralizepy import utils
 from decentralizepy.graphs.Graph import Graph
 from decentralizepy.mappings.Mapping import Mapping
-from decentralizepy.node.Node import Node
+from decentralizepy.node.KNN import KNN
 
 
-class OverlayNode(Node):
+class KFNNode(KNN):
     """
-    This class defines the node on overlay graph
+    This class defines the node for KNN Learning Node
 
     """
 
-    def save_plot(self, l, label, title, xlabel, filename):
+    def remove_edges(self):
         """
-        Save Matplotlib plot. Clears previous plots.
-
-        Parameters
-        ----------
-        l : dict
-            dict of x -> y. `x` must be castable to int.
-        label : str
-            label of the plot. Used for legend.
-        title : str
-            Header
-        xlabel : str
-            x-axis label
-        filename : str
-            Name of file to save the plot as.
+        Remove self.in_edges and self.out_edges from overall fully connected
 
         """
-        plt.clf()
-        y_axis = [l[key] for key in l.keys()]
-        x_axis = list(map(int, l.keys()))
-        plt.plot(x_axis, y_axis, label=label)
-        plt.xlabel(xlabel)
-        plt.title(title)
-        plt.savefig(filename)
 
-    def get_neighbors(self, node=None):
-        return self.my_neighbors
+        to_remove = self.my_neighbors
+        self.my_neighbors = self.graph.neighbors(self.uid)
+        for i in to_remove:
+            self.my_neighbors.remove(i)
 
-    def receive_DPSGD(self):
-        return self.receive_channel("DPSGD")
+        # Add a ring
+        self.my_neighbors.add((self.uid + self.graph.n_procs + 1) % self.graph.n_procs)
+        self.my_neighbors.add((self.uid + self.graph.n_procs - 1) % self.graph.n_procs)
 
-    def build_topology(self):
-        pass
+        self.in_edges = self.out_edges = self.my_neighbors
 
     def run(self):
         """
@@ -80,6 +65,11 @@ class OverlayNode(Node):
         self.out_edges = self.out_edges.union(self.in_edges)
         self.my_neighbors = self.in_edges = set(self.out_edges)
 
+        self.remove_edges()
+
+        logging.info("Remaining KFN: {}".format(self.my_neighbors))
+        assert len(self.my_neighbors) > 0
+
         logging.info("Total number of neighbor: {}".format(len(self.my_neighbors)))
 
         for iteration in range(self.iterations):
@@ -92,12 +82,12 @@ class OverlayNode(Node):
 
             to_send = self.sharing.get_data_to_send()
             to_send["CHANNEL"] = "DPSGD"
-            to_send["degree"] = len(self.in_edges)
+            to_send["degree"] = len(self.my_neighbors)
 
-            assert len(self.out_edges) != 0
-            assert len(self.in_edges) != 0
+            assert len(self.my_neighbors) != 0
+            assert len(self.my_neighbors) != 0
 
-            for neighbor in self.out_edges:
+            for neighbor in self.my_neighbors:
                 self.communication.send(neighbor, to_send)
 
             while not self.received_from_all():
@@ -112,7 +102,7 @@ class OverlayNode(Node):
                 self.peer_deques[sender].append(data)
 
             averaging_deque = dict()
-            for neighbor in self.in_edges:
+            for neighbor in self.my_neighbors:
                 averaging_deque[neighbor] = self.peer_deques[neighbor]
 
             self.sharing._averaging(averaging_deque)
@@ -193,174 +183,6 @@ class OverlayNode(Node):
         # self.model.dump_weights(self.weights_store_dir, self.uid, iteration)
         logging.info("All neighbors disconnected. Process complete!")
 
-    def cache_fields(
-        self,
-        rank,
-        machine_id,
-        mapping,
-        graph,
-        iterations,
-        log_dir,
-        weights_store_dir,
-        test_after,
-        train_evaluate_after,
-        reset_optimizer,
-    ):
-        """
-        Instantiate object field with arguments.
-
-        Parameters
-        ----------
-        rank : int
-            Rank of process local to the machine
-        machine_id : int
-            Machine ID on which the process in running
-        mapping : decentralizepy.mappings
-            The object containing the mapping rank <--> uid
-        graph : decentralizepy.graphs
-            The object containing the global graph
-        iterations : int
-            Number of iterations (communication steps) for which the model should be trained
-        log_dir : str
-            Logging directory
-        weights_store_dir : str
-            Directory in which to store model weights
-        test_after : int
-            Number of iterations after which the test loss and accuracy arecalculated
-        train_evaluate_after : int
-            Number of iterations after which the train loss is calculated
-        reset_optimizer : int
-            1 if optimizer should be reset every communication round, else 0
-        """
-        self.rank = rank
-        self.machine_id = machine_id
-        self.graph = graph
-        self.mapping = mapping
-        self.uid = self.mapping.get_uid(rank, machine_id)
-        self.log_dir = log_dir
-        self.weights_store_dir = weights_store_dir
-        self.iterations = iterations
-        self.test_after = test_after
-        self.train_evaluate_after = train_evaluate_after
-        self.reset_optimizer = reset_optimizer
-        self.sent_disconnections = False
-
-        logging.debug("Rank: %d", self.rank)
-        logging.debug("type(graph): %s", str(type(self.rank)))
-        logging.debug("type(mapping): %s", str(type(self.mapping)))
-
-    def init_comm(self, comm_configs):
-        """
-        Instantiate communication module from config.
-
-        Parameters
-        ----------
-        comm_configs : dict
-            Python dict containing communication config params
-
-        """
-        comm_module = importlib.import_module(comm_configs["comm_package"])
-        comm_class = getattr(comm_module, comm_configs["comm_class"])
-        comm_params = utils.remove_keys(comm_configs, ["comm_package", "comm_class"])
-        self.addresses_filepath = comm_params.get("addresses_filepath", None)
-        self.communication = comm_class(
-            self.rank, self.machine_id, self.mapping, self.graph.n_procs, **comm_params
-        )
-
-    def instantiate(
-        self,
-        rank: int,
-        machine_id: int,
-        mapping: Mapping,
-        graph: Graph,
-        config,
-        iterations=1,
-        log_dir=".",
-        weights_store_dir=".",
-        log_level=logging.INFO,
-        test_after=5,
-        train_evaluate_after=1,
-        reset_optimizer=1,
-        *args
-    ):
-        """
-        Construct objects.
-
-        Parameters
-        ----------
-        rank : int
-            Rank of process local to the machine
-        machine_id : int
-            Machine ID on which the process in running
-        mapping : decentralizepy.mappings
-            The object containing the mapping rank <--> uid
-        graph : decentralizepy.graphs
-            The object containing the global graph
-        config : dict
-            A dictionary of configurations.
-        iterations : int
-            Number of iterations (communication steps) for which the model should be trained
-        log_dir : str
-            Logging directory
-        weights_store_dir : str
-            Directory in which to store model weights
-        log_level : logging.Level
-            One of DEBUG, INFO, WARNING, ERROR, CRITICAL
-        test_after : int
-            Number of iterations after which the test loss and accuracy arecalculated
-        train_evaluate_after : int
-            Number of iterations after which the train loss is calculated
-        reset_optimizer : int
-            1 if optimizer should be reset every communication round, else 0
-        args : optional
-            Other arguments
-
-        """
-        logging.info("Started process.")
-
-        self.init_log(log_dir, rank, log_level)
-
-        self.cache_fields(
-            rank,
-            machine_id,
-            mapping,
-            graph,
-            iterations,
-            log_dir,
-            weights_store_dir,
-            test_after,
-            train_evaluate_after,
-            reset_optimizer,
-        )
-        self.init_dataset_model(config["DATASET"])
-        self.init_optimizer(config["OPTIMIZER_PARAMS"])
-        self.init_trainer(config["TRAIN_PARAMS"])
-        self.init_comm(config["COMMUNICATION"])
-
-        self.message_queue = dict()
-
-        self.barrier = set()
-        self.my_neighbors = self.graph.neighbors(self.uid)
-
-        self.init_sharing(config["SHARING"])
-        self.peer_deques = dict()
-        self.connect_neighbors()
-
-    def received_from_all(self):
-        """
-        Check if all neighbors have sent the current iteration
-
-        Returns
-        -------
-        bool
-            True if required data has been received, False otherwise
-
-        """
-        for k in self.in_edges:
-            if (k not in self.peer_deques) or len(self.peer_deques[k]) == 0:
-                return False
-        return True
-
     def __init__(
         self,
         rank: int,
@@ -375,6 +197,8 @@ class OverlayNode(Node):
         test_after=5,
         train_evaluate_after=1,
         reset_optimizer=1,
+        initial_neighbors=4,
+        K=88,
         *args
     ):
         """
@@ -423,13 +247,7 @@ class OverlayNode(Node):
 
         """
 
-        total_threads = os.cpu_count()
-        self.threads_per_proc = max(
-            math.floor(total_threads / mapping.procs_per_machine), 1
-        )
-        torch.set_num_threads(self.threads_per_proc)
-        torch.set_num_interop_threads(1)
-        self.instantiate(
+        super().__init__(
             rank,
             machine_id,
             mapping,
@@ -442,13 +260,7 @@ class OverlayNode(Node):
             test_after,
             train_evaluate_after,
             reset_optimizer,
+            initial_neighbors,
+            K,
             *args
         )
-
-        self.in_edges = set()
-        self.out_edges = set()
-
-        logging.info(
-            "Each proc uses %d threads out of %d.", self.threads_per_proc, total_threads
-        )
-        self.run()

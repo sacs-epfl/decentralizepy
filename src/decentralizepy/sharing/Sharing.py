@@ -72,7 +72,7 @@ class Sharing:
             compressor_module = importlib.import_module(compression_package)
             compressor_class = getattr(compressor_module, compression_class)
             self.compressor = compressor_class()
-            logging.info(f"Using the {compressor_class} to compress the data")
+            logging.debug(f"Using the {compressor_class} to compress the data")
         else:
             assert not self.compress
 

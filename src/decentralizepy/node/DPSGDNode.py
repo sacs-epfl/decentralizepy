@@ -90,7 +90,7 @@ class DPSGDNode(Node):
 
             self.my_neighbors = new_neighbors
             self.connect_neighbors()
-            logging.info("Connected to all neighbors")
+            logging.debug("Connected to all neighbors")
             # self.instantiate_peer_deques()
 
             to_send = self.sharing.get_data_to_send()
@@ -101,7 +101,7 @@ class DPSGDNode(Node):
 
             while not self.received_from_all():
                 sender, data = self.receive_DPSGD()
-                logging.info(
+                logging.debug(
                     "Received Model from {} of iteration {}".format(
                         sender, data["iteration"]
                     )
@@ -244,9 +244,9 @@ class DPSGDNode(Node):
         self.reset_optimizer = reset_optimizer
         self.sent_disconnections = False
 
-        logging.info("Rank: %d", self.rank)
-        logging.info("type(graph): %s", str(type(self.rank)))
-        logging.info("type(mapping): %s", str(type(self.mapping)))
+        logging.debug("Rank: %d", self.rank)
+        logging.debug("type(graph): %s", str(type(self.rank)))
+        logging.debug("type(mapping): %s", str(type(self.mapping)))
 
     def init_comm(self, comm_configs):
         """

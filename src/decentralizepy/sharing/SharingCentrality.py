@@ -181,7 +181,7 @@ class Sharing:
         for neighbor in iter_neighbors:
             self.communication.send(neighbor, data)
 
-        logging.info("Waiting for messages from neighbors")
+        logging.debug("Waiting for messages from neighbors")
         while not self.received_from_all():
             sender, data = self.communication.receive()
             logging.debug("Received model from {}".format(sender))
@@ -191,15 +191,15 @@ class Sharing:
             del data["iteration"]
             del data["CHANNEL"]
             self.peer_deques[sender].append((degree, iteration, data))
-            logging.info(
+            logging.debug(
                 "Deserialized received model from {} of iteration {}".format(
                     sender, iteration
                 )
             )
 
-        logging.info("Starting model averaging after receiving from all neighbors")
+        logging.debug("Starting model averaging after receiving from all neighbors")
         self._averaging()
-        logging.info("Model averaging complete")
+        logging.debug("Model averaging complete")
 
         self.communication_round += 1
         self._post_step()

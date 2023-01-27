@@ -22,11 +22,15 @@ class KNN(OverlayNode):
     """
 
     def similarityMetric(self, candidate):
+        """
+        Lower is better
+
+        """
         logging.debug("A: {}".format(self.othersInfo[self.uid]))
         logging.debug("B: {}".format(self.othersInfo[candidate]))
         A = np.array(self.othersInfo[self.uid])
         B = np.array(self.othersInfo[candidate])
-        return np.dot(A, B) / (norm(A) * norm(B))
+        return 1.0 - np.dot(A, B) / (norm(A) * norm(B))
 
     def get_most_similar(self, candidates, to_keep=4):
         if len(candidates) <= to_keep:
@@ -117,7 +121,7 @@ class KNN(OverlayNode):
             current_candidates = current_candidates.union(new_candidates)
             if self.uid in current_candidates:
                 current_candidates.remove(self.uid)
-            self.out_edges = self.get_most_similar(current_candidates)
+            self.out_edges = self.get_most_similar(current_candidates, to_keep=self.K)
 
     def send_response(self, message, add_neighbor_info=False, process_candidates=False):
         self.mutex.acquire()
@@ -201,7 +205,7 @@ class KNN(OverlayNode):
                         x, add_neighbor_info=True, process_candidates=True
                     )
 
-    def build_topology(self, rounds=30, random_nodes=4):
+    def build_topology(self, rounds=60, random_nodes=4):
         self.knn_round = 0
         self.exit_receiver = False
         t = Thread(target=self.receiver_thread)
@@ -220,7 +224,7 @@ class KNN(OverlayNode):
 
         for round in range(rounds):
             self.knn_round = round
-            logging.info("Starting KNN Round {}".format(round))
+            logging.debug("Starting KNN Round {}".format(round))
             self.mutex.acquire()
             rand_neighbor = self.rng.choice(list(self.out_edges))
             logging.debug("Random neighbor: {}".format(rand_neighbor))
@@ -274,7 +278,7 @@ class KNN(OverlayNode):
             )
             self.mutex.release()
 
-            logging.info("Completed KNN Round {}".format(round))
+            logging.debug("Completed KNN Round {}".format(round))
 
             logging.debug("OutNodes: {}".format(self.out_edges))
 
@@ -291,7 +295,9 @@ class KNN(OverlayNode):
         self.mutex.release()
         logging.info("KNNByes Sent")
         t.join()
-        logging.info("Receiver Thread Returned")
+        logging.info("KNN Receiver Thread Returned")
+
+        self.sync_topology()
 
     def __init__(
         self,
@@ -308,6 +314,7 @@ class KNN(OverlayNode):
         train_evaluate_after=1,
         reset_optimizer=1,
         initial_neighbors=4,
+        K=4,
         *args
     ):
         """
@@ -380,6 +387,8 @@ class KNN(OverlayNode):
 
         self.rng = Random()
         self.rng.seed(self.uid + 100)
+
+        self.K = K
 
         self.initial_neighbors = initial_neighbors
         self.in_edges = set()

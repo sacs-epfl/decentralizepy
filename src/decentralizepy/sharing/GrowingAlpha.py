@@ -96,7 +96,7 @@ class GrowingAlpha(PartialModel):
             self.alpha = min(self.alpha, 1.00)
 
         if self.alpha == 0.0:
-            logging.info("Not sending/receiving data (alpha=0.0)")
+            logging.debug("Not sending/receiving data (alpha=0.0)")
             self.communication_round += 1
             return
 

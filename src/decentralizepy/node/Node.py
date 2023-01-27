@@ -22,7 +22,7 @@ class Node:
         Connects given neighbor. Sends HELLO.
 
         """
-        logging.info("Sending connection request to {}".format(neighbor))
+        logging.debug("Sending connection request to {}".format(neighbor))
         self.communication.init_connection(neighbor)
         self.communication.send(neighbor, {"HELLO": self.uid, "CHANNEL": "CONNECT"})
 
@@ -39,7 +39,7 @@ class Node:
                 return None
             sender, recv = x
 
-            logging.info(
+            logging.debug(
                 "Received some message from {} with CHANNEL: {}".format(
                     sender, recv["CHANNEL"]
                 )
@@ -54,7 +54,7 @@ class Node:
                     assert not block
                     return None
                 sender, recv = x
-                logging.info(
+                logging.debug(
                     "Received some message from {} with CHANNEL: {}".format(
                         sender, recv["CHANNEL"]
                     )
@@ -76,9 +76,9 @@ class Node:
 
         """
         while neighbor not in self.barrier:
-            logging.info("Waiting HELLO from {}".format(neighbor))
+            logging.debug("Waiting HELLO from {}".format(neighbor))
             sender, _ = self.receive_hello()
-            logging.info("Received HELLO from {}".format(sender))
+            logging.debug("Received HELLO from {}".format(sender))
             self.barrier.add(sender)
 
     def connect_neighbors(self):
@@ -184,9 +184,9 @@ class Node:
         self.iterations = iterations
         self.sent_disconnections = False
 
-        logging.info("Rank: %d", self.rank)
-        logging.info("type(graph): %s", str(type(self.rank)))
-        logging.info("type(mapping): %s", str(type(self.mapping)))
+        logging.debug("Rank: %d", self.rank)
+        logging.debug("type(graph): %s", str(type(self.rank)))
+        logging.debug("type(mapping): %s", str(type(self.mapping)))
 
     def init_dataset_model(self, dataset_configs):
         """

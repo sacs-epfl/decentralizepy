@@ -171,7 +171,7 @@ class PartialModel(Sharing):
 
         """
 
-        logging.info("Returning topk gradients")
+        logging.debug("Returning topk gradients")
         G_topk = torch.abs(self.model.model_change)
         std, mean = torch.std_mean(G_topk, unbiased=False)
         self.std = std.item()
@@ -224,11 +224,11 @@ class PartialModel(Sharing):
                 ) as of:
                     json.dump(shared_params, of)
 
-            logging.info("Extracting topk params")
+            logging.debug("Extracting topk params")
 
             T_topk = self.pre_share_model[G_topk]
 
-            logging.info("Generating dictionary to send")
+            logging.debug("Generating dictionary to send")
 
             m = dict()
 
@@ -244,11 +244,11 @@ class PartialModel(Sharing):
             m["send_partial"] = True
 
             assert len(m["indices"]) == len(m["params"])
-            logging.info("Elements sending: {}".format(len(m["indices"])))
+            logging.debug("Elements sending: {}".format(len(m["indices"])))
 
-            logging.info("Generated dictionary to send")
+            logging.debug("Generated dictionary to send")
 
-            logging.info("Converted dictionary to pickle")
+            logging.debug("Converted dictionary to pickle")
 
             return self.compress_data(m)
 
@@ -305,7 +305,7 @@ class PartialModel(Sharing):
         Called at the beginning of step.
 
         """
-        logging.info("PartialModel _pre_step")
+        logging.debug("PartialModel _pre_step")
         with torch.no_grad():
             tensors_to_cat = [
                 v.data.flatten() for _, v in self.model.state_dict().items()
@@ -333,7 +333,7 @@ class PartialModel(Sharing):
         Called at the end of step.
 
         """
-        logging.info("PartialModel _post_step")
+        logging.debug("PartialModel _post_step")
         with torch.no_grad():
             tensors_to_cat = [
                 v.data.flatten() for _, v in self.model.state_dict().items()

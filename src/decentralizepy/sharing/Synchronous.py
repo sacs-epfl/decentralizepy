@@ -195,29 +195,29 @@ class Synchronous:
 
         """
         self._pre_step()
-        logging.info("--- COMMUNICATION ROUND {} ---".format(self.communication_round))
+        logging.debug("--- COMMUNICATION ROUND {} ---".format(self.communication_round))
         if self.uid != 0:
             gradient = self.serialized_gradient()
             # Should be only one neighbour
 
             self.communication.send(0, gradient)
 
-            logging.info("Waiting for messages from central node")
+            logging.debug("Waiting for messages from central node")
             sender, data = self.communication.receive()
             logging.debug("Received model from {}".format(sender))
-            logging.info(
+            logging.debug(
                 "Deserialized received model from {} of iteration {}".format(
                     sender, self.communication_round
                 )
             )
             self.model.load_state_dict(data)
         else:
-            logging.info("Waiting for messages from leaf nodes")
+            logging.debug("Waiting for messages from leaf nodes")
             while not self.received_from_all():
                 sender, data = self.communication.receive()
                 logging.debug("Received gradient from {}".format(sender))
                 self.peer_deques[sender].append(data)
-                logging.info(
+                logging.debug(
                     "Deserialized gradient model from {} of iteration {}".format(
                         sender, self.communication_round
                     )

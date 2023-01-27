@@ -321,12 +321,12 @@ class Choco(Sharing):
         )
         self.step_size = step_size
         self.alpha = alpha
-        logging.info(
+        logging.debug(
             "type(step_size): %s, value: %s",
             str(type(self.step_size)),
             str(self.step_size),
         )
-        logging.info(
+        logging.debug(
             "type(alpha): %s, value: %s", str(type(self.alpha)), str(self.alpha)
         )
         model_state_dict = model.state_dict()

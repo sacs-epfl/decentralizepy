@@ -16,7 +16,7 @@ class PeerSamplerDynamic(PeerSampler):
     def get_neighbors(self, node, iteration=None):
         if iteration != None:
             if iteration > self.iteration:
-                logging.info(
+                logging.debug(
                     "iteration, self.iteration: {}, {}".format(
                         iteration, self.iteration
                     )
