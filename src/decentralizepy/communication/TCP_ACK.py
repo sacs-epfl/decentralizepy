@@ -1,7 +1,9 @@
 import json
 import logging
 import pickle
+import queue
 from collections import deque
+from threading import Event, Lock, Thread
 from time import sleep
 
 import zmq
@@ -10,6 +12,8 @@ from decentralizepy.communication.Communication import Communication
 
 HELLO = b"HELLO"
 BYE = b"BYE"
+RESEND_TIMEOUT = 0.5  # s
+RECV_TIMEOUT = 50  # ms
 
 
 class TCP(Communication):
@@ -48,7 +52,7 @@ class TCP(Communication):
         total_procs,
         addresses_filepath,
         offset=9000,
-        recv_timeout=50,
+        recv_timeout=RECV_TIMEOUT,
     ):
         """
         Constructor
@@ -97,7 +101,69 @@ class TCP(Communication):
         self.peer_deque = deque()
         self.peer_sockets = dict()
 
-        # sleep(2) # Sleep for socket creation everywhere
+        self.receiverQueue = queue.Queue()
+        self.mutex = Lock()
+        self.senderThread = Thread(target=self.keep_sending, daemon=True)
+        self.receiverThread = Thread(target=self.keep_receiving, daemon=True)
+        self.senderQueue = dict()
+        self.terminateEvent = Event()
+
+        self.sent_IDs = dict()
+        self.received_IDs = dict()
+
+        self.senderThread.start()
+        self.receiverThread.start()
+
+    def keep_sending(self):
+        while True:
+            if self.terminateEvent.is_set():
+                return
+
+            self.mutex.acquire()
+            for key in self.senderQueue:
+                for _, m in self.senderQueue[key]:
+                    self.push_message(key, m)
+            self.mutex.release()
+            sleep(RESEND_TIMEOUT)
+
+    def keep_receiving(self):
+        while True:
+            if self.terminateEvent.is_set():
+                return
+
+            try:
+                sender, recv = self.router.recv_multipart()
+            except zmq.ZMQError as exc:
+                if exc.errno == zmq.EAGAIN:
+                    continue
+                else:
+                    raise
+
+            s, id, isAck, r = self.decrypt(sender, recv)
+            if isAck:
+                logging.debug("Received acknowledgement from {} id {}".format(s, id))
+                self.mutex.acquire()
+                self.senderQueue[s][:] = [
+                    tup for tup in self.senderQueue[s] if id != tup[0]
+                ]
+                # for i, v in enumerate(self.senderQueue[s]):
+                #     if id == v[0]:
+                #         del self.senderQueue[s][i]
+                #         break
+                self.mutex.release()
+            else:
+                logging.debug("Sending acknowledgement to {} id {}".format(s, id))
+                self.mutex.acquire()
+                self.push_message(s, self.encrypt({}, id, isAck=True))
+                self.mutex.release()
+                if s not in self.received_IDs:
+                    self.received_IDs[s] = set()
+                if id not in self.received_IDs[s]:
+                    logging.debug("Received {} from {}".format(id, s))
+                    self.received_IDs[s].add(id)
+                    self.receiverQueue.put((s, r))
+                else:
+                    logging.debug("Duplicate {} from {}".format(id, s))
 
     def __del__(self):
         """
@@ -106,7 +172,7 @@ class TCP(Communication):
         """
         self.context.destroy(linger=0)
 
-    def encrypt(self, data):
+    def encrypt(self, data, id=0, isAck=False):
         """
         Encode data as python pickle.
 
@@ -124,7 +190,7 @@ class TCP(Communication):
         data_len = 0
         if "params" in data:
             data_len = len(pickle.dumps(data["params"]))
-        output = pickle.dumps(data)
+        output = pickle.dumps({"id": id, "isAck": isAck, "data": data})
         self.total_meta += len(output) - data_len
         self.total_data += data_len
         return output
@@ -143,12 +209,13 @@ class TCP(Communication):
         Returns
         -------
         tuple
-            (sender: int, data: dict)
+            (sender: int, id: int, isAck: bool, data: dict)
 
         """
         sender = int(sender.decode())
         data = pickle.loads(data)
-        return sender, data
+        id, isAck, data = data["id"], data["isAck"], data["data"]
+        return sender, id, isAck, data
 
     def init_connection(self, neighbor):
         """
@@ -182,7 +249,7 @@ class TCP(Communication):
         Returns ONE message received.
 
         Returns
-        ----------
+        -------
         dict
             Received and decrypted data
 
@@ -194,17 +261,37 @@ class TCP(Communication):
         """
         while True:
             try:
-                sender, recv = self.router.recv_multipart()
-                s, r = self.decrypt(sender, recv)
-                return s, r
-            except zmq.ZMQError as exc:
-                if exc.errno == zmq.EAGAIN:
-                    if not block:
-                        return None
-                    else:
-                        continue
+                return self.receiverQueue.get(block=True, timeout=self.recv_timeout)
+            except queue.Empty as _:
+                if not block:
+                    return None
                 else:
-                    raise
+                    continue
+
+    def push_message(self, uid, data):
+        """
+        Send a message to a process.
+
+        Parameters
+        ----------
+        uid : int
+            Neighbor's unique ID
+        data : dict
+            Message as a Python dictionary
+
+        """
+        id = str(uid).encode()
+        if id in self.peer_sockets:
+            self.peer_sockets[id].send(data)
+        else:
+            logging.debug("Not sending message to {}: Initialize Connection".format(id))
+
+    def get_message_id(self, uid):
+        if uid not in self.sent_IDs:
+            self.sent_IDs[uid] = 0
+        m_id = self.sent_IDs[uid]
+        self.sent_IDs[uid] += 1
+        return m_id
 
     def send(self, uid, data, encrypt=True):
         """
@@ -218,14 +305,30 @@ class TCP(Communication):
             Message as a Python dictionary
 
         """
+        assert encrypt
+        message_id = self.get_message_id(uid)
+        to_send = self.encrypt(data, message_id)
 
-        if encrypt:
-            to_send = self.encrypt(data)
-        else:
-            to_send = data
         data_size = len(to_send)
         self.total_bytes += data_size
-        id = str(uid).encode()
-        self.peer_sockets[id].send(to_send)
+
+        self.mutex.acquire()
+
+        if uid not in self.senderQueue:
+            self.senderQueue[uid] = []
+        self.senderQueue[uid].append((message_id, to_send))
+
+        self.push_message(uid, to_send)
+        self.mutex.release()
+
         logging.debug("{} sent the message to {}.".format(self.uid, uid))
         logging.debug("Sent message size: {}".format(data_size))
+
+    # def terminate(self):
+    #     """
+    #     Safely terminate the communication sockets.
+
+    #     """
+    #     self.terminateEvent.set()
+    #     self.senderThread.join()
+    #     self.receiverThread.join()

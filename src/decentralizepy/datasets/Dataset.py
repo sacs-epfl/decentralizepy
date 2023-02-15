@@ -14,6 +14,7 @@ class Dataset:
         rank: int,
         machine_id: int,
         mapping: Mapping,
+        only_local=False,
         train_dir="",
         test_dir="",
         sizes="",
@@ -31,6 +32,8 @@ class Dataset:
         mapping : decentralizepy.mappings.Mapping
             Mapping to convert rank, machine_id -> uid for data partitioning
             It also provides the total number of global processes
+        only_local : bool, optional
+            True if the dataset needs to be partioned only among local procs, False otherwise
         train_dir : str, optional
             Path to the training data files. Required to instantiate the training set
             The training set is partitioned according to the number of global processes and sizes
@@ -46,8 +49,14 @@ class Dataset:
         self.rank = rank
         self.machine_id = machine_id
         self.mapping = mapping
-        # the number of global processes, needed to split-up the dataset
-        self.n_procs = mapping.get_n_procs()
+        self.uid = self.mapping.get_uid(rank, machine_id)
+        self.only_local = only_local
+        self.dataset_id = self.rank if self.only_local else self.uid
+        self.num_partitions = (
+            self.mapping.get_local_procs_count()
+            if self.only_local
+            else self.mapping.get_n_procs()
+        )
         self.train_dir = utils.conditional_value(train_dir, "", None)
         self.test_dir = utils.conditional_value(test_dir, "", None)
         self.sizes = utils.conditional_value(sizes, "", None)

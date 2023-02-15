@@ -3,6 +3,7 @@ import logging
 import math
 import os
 from collections import deque
+from time import sleep
 
 import torch
 
@@ -24,7 +25,12 @@ class Node:
         """
         logging.debug("Sending connection request to {}".format(neighbor))
         self.communication.init_connection(neighbor)
-        self.communication.send(neighbor, {"HELLO": self.uid, "CHANNEL": "CONNECT"})
+        self.pendingHellos.append(neighbor)
+
+    def send_pending_hellos(self):
+        for n in self.pendingHellos:
+            self.communication.send(n, {"HELLO": self.uid, "CHANNEL": "CONNECT"})
+        self.pendingHellos = []
 
     def receive_channel(self, channel, block=True):
         if channel not in self.message_queue:
@@ -77,8 +83,14 @@ class Node:
         """
         while neighbor not in self.barrier:
             logging.debug("Waiting HELLO from {}".format(neighbor))
-            sender, _ = self.receive_hello()
-            logging.debug("Received HELLO from {}".format(sender))
+            sender, m = self.receive_hello()
+            if "HELLO" in m:
+                logging.debug("Received HELLO from {}".format(sender))
+                self.communication.send(
+                    sender, {"ACK+HELLO": self.uid, "CHANNEL": "CONNECT"}
+                )
+            else:
+                logging.debug("Received ACK from {}".format(sender))
             self.barrier.add(sender)
 
     def connect_neighbors(self):
@@ -93,10 +105,15 @@ class Node:
 
         """
         wait_acknowledgements = []
+        self.pendingHellos = []
         for neighbor in self.my_neighbors:
             if not self.communication.already_connected(neighbor):
                 self.connect_neighbor(neighbor)
                 wait_acknowledgements.append(neighbor)
+
+        if len(self.pendingHellos):
+            sleep(5)
+            self.send_pending_hellos()
 
         for neighbor in wait_acknowledgements:
             self.wait_for_hello(neighbor)

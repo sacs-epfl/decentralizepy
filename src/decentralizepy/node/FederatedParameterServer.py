@@ -230,7 +230,11 @@ class FederatedParameterServer(Node):
 
         """
         for k in self.current_workers:
-            if (k not in self.peer_deques) or len(self.peer_deques[k]) == 0:
+            if (
+                (k not in self.peer_deques)
+                or len(self.peer_deques[k]) == 0
+                or self.peer_deques[k][0]["iteration"] != self.iteration
+            ):
                 return False
         return True
 
@@ -298,7 +302,11 @@ class FederatedParameterServer(Node):
                 sender, data = self.receive_channel("DPSGD")
                 if sender not in self.peer_deques:
                     self.peer_deques[sender] = deque()
-                self.peer_deques[sender].append(data)
+
+                if data["iteration"] == self.iteration:
+                    self.peer_deques[sender].appendleft(data)
+                else:
+                    self.peer_deques[sender].append(data)
 
             logging.debug("Received from all current workers")
 

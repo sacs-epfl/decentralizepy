@@ -61,7 +61,7 @@ def get_args():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("-mid", "--machine_id", type=int, default=0)
-    parser.add_argument("-ps", "--procs_per_machine", type=int, default=1)
+    parser.add_argument("-ps", "--procs_per_machine", type=int, default=1, nargs="+")
     parser.add_argument("-ms", "--machines", type=int, default=1)
     parser.add_argument(
         "-ld",

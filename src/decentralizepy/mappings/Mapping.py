@@ -26,6 +26,7 @@ class Mapping:
         -------
         int
             the number of global processes
+
         """
 
         return self.n_procs

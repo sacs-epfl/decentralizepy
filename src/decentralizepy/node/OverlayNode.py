@@ -109,7 +109,11 @@ class OverlayNode(Node):
                 )
                 if sender not in self.peer_deques:
                     self.peer_deques[sender] = deque()
-                self.peer_deques[sender].append(data)
+
+                if data["iteration"] == self.iteration:
+                    self.peer_deques[sender].appendleft(data)
+                else:
+                    self.peer_deques[sender].append(data)
 
             averaging_deque = dict()
             for neighbor in self.in_edges:
@@ -357,7 +361,11 @@ class OverlayNode(Node):
 
         """
         for k in self.in_edges:
-            if (k not in self.peer_deques) or len(self.peer_deques[k]) == 0:
+            if (
+                (k not in self.peer_deques)
+                or len(self.peer_deques[k]) == 0
+                or self.peer_deques[k][0]["iteration"] != self.iteration
+            ):
                 return False
         return True
 

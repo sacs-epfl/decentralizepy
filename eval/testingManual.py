@@ -7,8 +7,8 @@ from torch import multiprocessing as mp
 
 from decentralizepy import utils
 from decentralizepy.graphs.Graph import Graph
-from decentralizepy.mappings.Linear import Linear
-from decentralizepy.node.KFNNode import KFNNode
+from decentralizepy.mappings.Manual import Manual
+from decentralizepy.node.DPSGDNode import DPSGDNode
 
 
 def read_ini(file_path):
@@ -23,7 +23,6 @@ def read_ini(file_path):
 
 if __name__ == "__main__":
     args = utils.get_args()
-
     Path(args.log_dir).mkdir(parents=True, exist_ok=True)
 
     log_level = {
@@ -46,15 +45,16 @@ if __name__ == "__main__":
     g = Graph()
     g.read_graph_from_file(args.graph_file, args.graph_type)
     n_machines = args.machines
-    procs_per_machine = args.procs_per_machine[0]
-    l = Linear(n_machines, procs_per_machine)
+    procs_per_machine = args.procs_per_machine
     m_id = args.machine_id
 
+    l = Manual(n_machines, procs_per_machine, current_machine=m_id)
+
     processes = []
-    for r in range(procs_per_machine):
+    for r in range(procs_per_machine[m_id]):
         processes.append(
             mp.Process(
-                target=KFNNode,
+                target=DPSGDNode,
                 args=[
                     r,
                     m_id,

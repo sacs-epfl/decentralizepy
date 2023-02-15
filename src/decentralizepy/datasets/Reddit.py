@@ -120,14 +120,13 @@ class Reddit(Dataset):
         # clients, num_samples, train_data = self.__read_dir__(self.train_dir)
 
         if self.sizes == None:  # Equal distribution of data among processes
-            e = c_len // self.n_procs
+            e = c_len // self.num_partitions
             frac = e / c_len
-            self.sizes = [frac] * self.n_procs
-            self.sizes[-1] += 1.0 - frac * self.n_procs
+            self.sizes = [frac] * self.num_partitions
+            self.sizes[-1] += 1.0 - frac * self.num_partitions
             logging.debug("Size fractions: {}".format(self.sizes))
 
-        self.uid = self.mapping.get_uid(self.rank, self.machine_id)
-        my_clients = DataPartitioner(files, self.sizes).use(self.uid)
+        my_clients = DataPartitioner(files, self.sizes).use(self.dataset_id)
         my_train_data = {"x": [], "y": []}
         self.clients = []
         self.num_samples = []
@@ -184,7 +183,7 @@ class Reddit(Dataset):
         rank: int,
         machine_id: int,
         mapping: Mapping,
-        n_procs="",
+        only_local=False,
         train_dir="",
         test_dir="",
         sizes="",
@@ -202,6 +201,8 @@ class Reddit(Dataset):
         mapping : decentralizepy.mappings.Mapping
             Mapping to convert rank, machine_id -> uid for data partitioning
             It also provides the total number of global processes
+        only_local : bool, optional
+            True if the dataset needs to be partioned only among local procs, False otherwise
         train_dir : str, optional
             Path to the training data files. Required to instantiate the training set
             The training set is partitioned according to the number of global processes and sizes
@@ -218,6 +219,7 @@ class Reddit(Dataset):
             rank,
             machine_id,
             mapping,
+            only_local,
             train_dir,
             test_dir,
             sizes,

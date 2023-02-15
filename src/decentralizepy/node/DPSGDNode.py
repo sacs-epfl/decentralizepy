@@ -49,11 +49,6 @@ class DPSGDNode(Node):
     def get_neighbors(self, node=None):
         return self.my_neighbors
 
-    # def instantiate_peer_deques(self):
-    #     for neighbor in self.my_neighbors:
-    #         if neighbor not in self.peer_deques:
-    #             self.peer_deques[neighbor] = deque()
-
     def receive_DPSGD(self):
         return self.receive_channel("DPSGD")
 
@@ -91,7 +86,6 @@ class DPSGDNode(Node):
             self.my_neighbors = new_neighbors
             self.connect_neighbors()
             logging.debug("Connected to all neighbors")
-            # self.instantiate_peer_deques()
 
             to_send = self.sharing.get_data_to_send()
             to_send["CHANNEL"] = "DPSGD"
@@ -108,7 +102,11 @@ class DPSGDNode(Node):
                 )
                 if sender not in self.peer_deques:
                     self.peer_deques[sender] = deque()
-                self.peer_deques[sender].append(data)
+
+                if data["iteration"] == self.iteration:
+                    self.peer_deques[sender].appendleft(data)
+                else:
+                    self.peer_deques[sender].append(data)
 
             averaging_deque = dict()
             for neighbor in self.my_neighbors:
@@ -356,7 +354,11 @@ class DPSGDNode(Node):
 
         """
         for k in self.my_neighbors:
-            if (k not in self.peer_deques) or len(self.peer_deques[k]) == 0:
+            if (
+                (k not in self.peer_deques)
+                or len(self.peer_deques[k]) == 0
+                or self.peer_deques[k][0]["iteration"] != self.iteration
+            ):
                 return False
         return True
 
@@ -424,7 +426,7 @@ class DPSGDNode(Node):
 
         total_threads = os.cpu_count()
         self.threads_per_proc = max(
-            math.floor(total_threads / mapping.procs_per_machine), 1
+            math.floor(total_threads / mapping.get_local_procs_count()), 1
         )
         torch.set_num_threads(self.threads_per_proc)
         torch.set_num_interop_threads(1)

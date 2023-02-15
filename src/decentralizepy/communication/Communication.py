@@ -107,3 +107,10 @@ class Communication:
 
         """
         raise NotImplementedError
+
+    def terminate(self):
+        """
+        Terminate the communication sockets.
+
+        """
+        return

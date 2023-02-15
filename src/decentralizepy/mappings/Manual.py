@@ -1,10 +1,9 @@
 from decentralizepy.mappings.Mapping import Mapping
 
 
-class Linear(Mapping):
+class Manual(Mapping):
     """
-    This class defines the mapping:
-        uid = machine_id * procs_per_machine + rank
+    This class defines the manual mapping
 
     """
 
@@ -18,15 +17,19 @@ class Linear(Mapping):
         ----------
         n_machines : int
             Number of machines involved in learning
-        procs_per_machine : int
-            Number of processes spawned per machine
+        procs_per_machine : list(int)
+            A list of number of processes spawned per machine
         global_service_machine: int, optional
             Machine ID on which the server/services are hosted
         current_machine: int, optional
             Machine ID of local machine
 
         """
-        super().__init__(n_machines * procs_per_machine)
+
+        self.n_procs = 0
+        for i in procs_per_machine:
+            self.n_procs += i
+        super().__init__(self.n_procs)
         self.n_machines = n_machines
         self.procs_per_machine = procs_per_machine
         self.global_service_machine = global_service_machine
@@ -51,7 +54,10 @@ class Linear(Mapping):
         """
         if rank < 0:
             return rank
-        return machine_id * self.procs_per_machine + rank
+        cur_uid = 0
+        for i in range(machine_id):
+            cur_uid += self.procs_per_machine[i]
+        return cur_uid + rank
 
     def get_machine_and_rank(self, uid: int):
         """
@@ -70,7 +76,16 @@ class Linear(Mapping):
         """
         if uid < 0:
             return uid, self.global_service_machine
-        return (uid % self.procs_per_machine), (uid // self.procs_per_machine)
+
+        machine, rank = 0, 0
+        for procs in self.procs_per_machine:
+            if uid < procs:
+                rank = uid
+                break
+            else:
+                machine += 1
+                uid -= procs
+        return rank, machine
 
     def get_local_procs_count(self):
         """
@@ -83,4 +98,4 @@ class Linear(Mapping):
 
         """
 
-        return self.procs_per_machine
+        return self.procs_per_machine[self.current_machine]

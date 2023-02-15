@@ -1,17 +1,8 @@
 import json
 import logging
-import math
 import os
-import queue
 from collections import deque
-from random import Random
-from threading import Lock, Thread
 
-import numpy as np
-import torch
-from numpy.linalg import norm
-
-from decentralizepy import utils
 from decentralizepy.graphs.Graph import Graph
 from decentralizepy.mappings.Mapping import Mapping
 from decentralizepy.node.KNN import KNN
@@ -99,7 +90,11 @@ class KFNNode(KNN):
                 )
                 if sender not in self.peer_deques:
                     self.peer_deques[sender] = deque()
-                self.peer_deques[sender].append(data)
+
+                if data["iteration"] == self.iteration:
+                    self.peer_deques[sender].appendleft(data)
+                else:
+                    self.peer_deques[sender].append(data)
 
             averaging_deque = dict()
             for neighbor in self.my_neighbors:

@@ -21,17 +21,51 @@ class MovieLens(Dataset):
         rank: int,
         machine_id: int,
         mapping: Mapping,
+        only_local=False,
         train_dir="",
         test_dir="",
         sizes="",
         test_batch_size=1,
     ):
+        """
+        Constructor which reads the data files, instantiates and partitions the dataset
+
+        Parameters
+        ----------
+        rank : int
+            Rank of the current process (to get the partition).
+        machine_id : int
+            Machine ID
+        mapping : decentralizepy.mappings.Mapping
+            Mapping to convert rank, machine_id -> uid for data partitioning
+            It also provides the total number of global processes
+        only_local : bool, optional
+            True if the dataset needs to be partioned only among local procs, False otherwise
+        train_dir : str, optional
+            Path to the training data files. Required to instantiate the training set
+            The training set is partitioned according to the number of global processes and sizes
+        test_dir : str. optional
+            Path to the testing data files Required to instantiate the testing set
+        sizes : list(int), optional
+            A list of fractions specifying how much data to alot each process. Sum of fractions should be 1.0
+            By default, each process gets an equal amount.
+        test_batch_size : int, optional
+            Batch size during testing. Default value is 64
+
+        """
         super().__init__(
-            rank, machine_id, mapping, train_dir, test_dir, sizes, test_batch_size
+            rank,
+            machine_id,
+            mapping,
+            only_local,
+            train_dir,
+            test_dir,
+            sizes,
+            test_batch_size,
         )
         self.n_users, self.n_items, df_train, df_test = self._load_data()
         self.train_data, self.test_data = self._split_data(
-            df_train, df_test, self.n_procs
+            df_train, df_test, self.num_partitions
         )
 
         # [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
@@ -86,11 +120,11 @@ class MovieLens(Dataset):
         # SPLITTING BY USERS: group by users and split the data accordingly
         mod = self.n_users % world_size
         users_count = self.n_users // world_size
-        if self.rank < mod:
+        if self.dataset_id < mod:
             users_count += 1
-            offset = users_count * self.rank
+            offset = users_count * self.dataset_id
         else:
-            offset = users_count * self.rank + mod
+            offset = users_count * self.dataset_id + mod
 
         my_train_data = pd.DataFrame()
         my_test_data = pd.DataFrame()
