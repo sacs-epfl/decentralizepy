@@ -187,12 +187,11 @@ class Sharing:
         self._post_step()
         self.communication_round += 1
 
-    def get_data_to_send(self):
+    def get_data_to_send(self, degree=None):
         self._pre_step()
         data = self.serialized_model()
         my_uid = self.mapping.get_uid(self.rank, self.machine_id)
-        all_neighbors = self.graph.neighbors(my_uid)
-        data["degree"] = len(all_neighbors)
+        data["degree"] = degree if degree != None else len(self.graph.neighbors(my_uid))
         data["iteration"] = self.communication_round
         return data
 

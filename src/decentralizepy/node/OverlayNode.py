@@ -90,7 +90,7 @@ class OverlayNode(Node):
             self.iteration = iteration
             self.trainer.train(self.dataset)
 
-            to_send = self.sharing.get_data_to_send()
+            to_send = self.sharing.get_data_to_send(degree=len(self.my_neighbors))
             to_send["CHANNEL"] = "DPSGD"
             to_send["degree"] = len(self.in_edges)
 
