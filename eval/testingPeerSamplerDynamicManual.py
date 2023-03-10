@@ -7,7 +7,7 @@ from torch import multiprocessing as mp
 
 from decentralizepy import utils
 from decentralizepy.graphs.Graph import Graph
-from decentralizepy.mappings.Linear import Linear
+from decentralizepy.mappings.Manual import Manual
 from decentralizepy.node.DPSGDWithPeerSampler import DPSGDWithPeerSampler
 from decentralizepy.node.PeerSamplerDynamic import PeerSamplerDynamic
 
@@ -47,13 +47,13 @@ if __name__ == "__main__":
     g = Graph()
     g.read_graph_from_file(args.graph_file, args.graph_type)
     n_machines = args.machines
-    procs_per_machine = args.procs_per_machine[0]
+    procs_per_machine = args.procs_per_machine
     m_id = args.machine_id
 
     sm = args.server_machine
     sr = args.server_rank
 
-    l = Linear(n_machines, procs_per_machine, global_service_machine=sm, current_machine=m_id)
+    l = Manual(n_machines, procs_per_machine, global_service_machine=sm, current_machine=m_id)
 
     processes = []
     if sm == m_id:
@@ -73,7 +73,7 @@ if __name__ == "__main__":
             )
         )
 
-    for r in range(0, procs_per_machine):
+    for r in range(0, procs_per_machine[m_id]):
         processes.append(
             mp.Process(
                 target=DPSGDWithPeerSampler,

@@ -193,8 +193,8 @@ class OverlayNode(Node):
         #     ) as of:
         #         json.dump(self.model.shared_parameters_counter.numpy().tolist(), of)
         self.disconnect_neighbors()
-        # logging.info("Storing final weight")
-        # self.model.dump_weights(self.weights_store_dir, self.uid, iteration)
+        logging.info("Storing final weight")
+        self.model.dump_weights(self.weights_store_dir, self.uid, iteration)
         logging.info("All neighbors disconnected. Process complete!")
 
     def cache_fields(

@@ -321,7 +321,7 @@ class DPSGDNodeFederated(Node):
 
         total_threads = os.cpu_count()
         self.threads_per_proc = max(
-            math.floor(total_threads / mapping.procs_per_machine), 1
+            math.floor(total_threads / mapping.get_local_procs_count()), 1
         )
         torch.set_num_threads(self.threads_per_proc)
         torch.set_num_interop_threads(1)

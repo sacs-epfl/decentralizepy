@@ -98,6 +98,23 @@ class PeerSampler(Node):
             self.rank, self.machine_id, self.mapping, self.graph.n_procs, **comm_params
         )
 
+    def init_dataset_model(self, dataset_configs):
+        """
+        Instantiate dataset and model from config.
+
+        Parameters
+        ----------
+        dataset_configs : dict
+            Python dict containing dataset config params
+
+        """
+        dataset_module = importlib.import_module(dataset_configs["dataset_package"])
+        self.dataset_class = getattr(dataset_module, dataset_configs["dataset_class"])
+        random_seed = (
+            dataset_configs["random_seed"] if "random_seed" in dataset_configs else 97
+        )
+        self.random_seed = random_seed
+
     def instantiate(
         self,
         rank: int,
@@ -147,6 +164,8 @@ class PeerSampler(Node):
             iterations,
             log_dir,
         )
+
+        self.init_dataset_model(config["DATASET"])
 
         self.message_queue = dict()
 

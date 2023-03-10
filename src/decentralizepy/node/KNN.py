@@ -30,7 +30,7 @@ class KNN(OverlayNode):
         logging.debug("B: {}".format(self.othersInfo[candidate]))
         A = np.array(self.othersInfo[self.uid])
         B = np.array(self.othersInfo[candidate])
-        return 1.0 - np.dot(A, B) / (norm(A) * norm(B))
+        return np.abs(np.dot(A, B) / (norm(A) * norm(B)))
 
     def get_most_similar(self, candidates, to_keep=4):
         if len(candidates) <= to_keep:
@@ -296,8 +296,6 @@ class KNN(OverlayNode):
         logging.info("KNNByes Sent")
         t.join()
         logging.info("KNN Receiver Thread Returned")
-
-        self.sync_topology()
 
     def __init__(
         self,
