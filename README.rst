@@ -1,3 +1,8 @@
+.. image:: https://upload.wikimedia.org/wikipedia/commons/f/f4/Logo_EPFL.svg
+   :alt: EPFL logo
+   :width: 75px
+   :align: right
+
 ==============
 decentralizepy
 ==============
