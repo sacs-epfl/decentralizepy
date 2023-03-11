@@ -48,6 +48,19 @@ Running the code
 * In eval/run.sh, modify arguments as required.
 * Execute eval/run.sh on all the machines simultaneously. There is a synchronization barrier mechanism at the start so that all processes start training together.
 
+------
+Citing
+------
+
+Cite us as ::
+
+   @misc{sacs:2022:decpy,
+	author={Rishi Sharma and others},
+	title={decentralizepy: An open-source decentralized learning research framework},
+	url={https://github.com/sacs-epfl/decentralizepy},
+	year={2022},
+   }
+
 ------------
 Contributing
 ------------
@@ -57,6 +70,12 @@ Contributing
 
     black .
     isort .
+
+-------
+Modules
+-------
+
+Following are the modules of decentralizepy:
 
 Node
 ----
