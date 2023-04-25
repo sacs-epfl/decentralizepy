@@ -160,6 +160,7 @@ class Training:
             The training dataset. Should implement get_trainset(batch_size, shuffle)
 
         """
+        self.model.train()
 
         if self.full_epochs:
             self.train_full(dataset)

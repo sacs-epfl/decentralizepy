@@ -23,7 +23,13 @@ class PeerSamplerDynamic(PeerSampler):
                 )
                 assert iteration == self.iteration + 1
                 self.iteration = iteration
-                self.graphs.append(Regular(self.graph.n_procs, self.graph_degree, seed=self.random_seed*100000+iteration))
+                self.graphs.append(
+                    Regular(
+                        self.graph.n_procs,
+                        self.graph_degree,
+                        seed=self.random_seed * 100000 + iteration,
+                    )
+                )
             return self.graphs[iteration].neighbors(node)
         else:
             return self.graph.neighbors(node)

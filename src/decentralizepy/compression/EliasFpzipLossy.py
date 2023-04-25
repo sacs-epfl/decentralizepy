@@ -11,7 +11,7 @@ class EliasFpzipLossy(Elias):
 
     """
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         """
         Constructor
         """

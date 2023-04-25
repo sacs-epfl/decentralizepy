@@ -333,10 +333,10 @@ class Femnist(Dataset):
 
         Returns
         -------
-        tuple
-            (accuracy, loss_value)
+        tuple(float, float)
 
         """
+        model.eval()
         testloader = self.get_testset()
 
         logging.debug("Test Loader instantiated.")

@@ -4,7 +4,7 @@ class Compression:
 
     """
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         """
         Constructor
         """
@@ -24,7 +24,7 @@ class Compression:
             encoded data as bytes
 
         """
-        raise NotImplementedError
+        return arr
 
     def decompress(self, bytes):
         """
@@ -41,7 +41,7 @@ class Compression:
             decompressed data as array
 
         """
-        raise NotImplementedError
+        return bytes
 
     def compress_float(self, arr):
         """
@@ -58,7 +58,7 @@ class Compression:
             encoded data as bytes
 
         """
-        raise NotImplementedError
+        return arr
 
     def decompress_float(self, bytes):
         """
@@ -75,4 +75,4 @@ class Compression:
             decompressed data as array
 
         """
-        raise NotImplementedError
+        return bytes

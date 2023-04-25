@@ -11,10 +11,11 @@ class Elias(Compression):
 
     """
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         """
         Constructor
         """
+        super().__init__()
 
     def compress(self, arr):
         """
@@ -94,37 +95,3 @@ class Elias(Compression):
             out[b[offs[1:] - i - 1] & (sz >= i)] += 1 << i
         out = np.cumsum(out_fin)
         return out
-
-    def compress_float(self, arr):
-        """
-        compression function for float arrays
-
-        Parameters
-        ----------
-        arr : np.ndarray
-            Data to compress
-
-        Returns
-        -------
-        bytearray
-            encoded data as bytes
-
-        """
-        return arr
-
-    def decompress_float(self, bytes):
-        """
-        decompression function for compressed float arrays
-
-        Parameters
-        ----------
-        bytes :bytearray
-            compressed data
-
-        Returns
-        -------
-        arr : np.ndarray
-            decompressed data as array
-
-        """
-        return bytes

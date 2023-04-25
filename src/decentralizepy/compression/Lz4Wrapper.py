@@ -10,7 +10,7 @@ class Lz4Wrapper(Compression):
 
     """
 
-    def __init__(self, compress_metadata=True, compress_data=False):
+    def __init__(self, compress_metadata=True, compress_data=False, *args, **kwargs):
         """
         Constructor
         """

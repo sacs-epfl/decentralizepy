@@ -156,6 +156,22 @@ class MovieLens(Dataset):
         raise RuntimeError("Test set not initialized!")
 
     def test(self, model, loss):
+        """
+        Evaluate the model on the test set.
+
+        Parameters
+        ----------
+        model : torch.nn.Module
+            The model to evaluate.
+        loss : torch.nn.Module
+            The loss function to use.
+
+        Returns
+        -------
+        tuple(float, float)
+
+        """
+        model.eval()
         test_set = self.get_testset()
         logging.debug("Test Loader instantiated.")
 

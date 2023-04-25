@@ -53,7 +53,9 @@ if __name__ == "__main__":
     sm = args.server_machine
     sr = args.server_rank
 
-    l = Manual(n_machines, procs_per_machine, global_service_machine=sm, current_machine=m_id)
+    l = Manual(
+        n_machines, procs_per_machine, global_service_machine=sm, current_machine=m_id
+    )
 
     processes = []
     if sm == m_id:
