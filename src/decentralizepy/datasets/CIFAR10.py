@@ -49,27 +49,24 @@ class CIFAR10(Dataset):
             self.trainset = DataPartitioner(trainset, sizes = self.sizes, seed = self.random_seed).use(self.dataset_id)
         elif self.partition_niid == 'simple':
             self.trainset = SimpleDataPartitioner(trainset, sizes = self.sizes, seed = self.random_seed).use(self.dataset_id)
-        else:
-            train_data = {key: [] for key in range(10)}
+        elif self.partition_niid == 'dirichlet':
+            self.trainset = DirichletDataPartitioner(
+                trainset, sizes=self.sizes, seed = self.random_seed, alpha=self.alpha, num_classes=self.num_classes
+            ).use(self.dataset_id)
+        elif self.partition_niid == 'kshard':
+            train_data = {key: [] for key in range(self.num_classes)}
             for x, y in trainset:
                 train_data[y].append(x)
             all_trainset = []
             for y, x in train_data.items():
                 all_trainset.extend([(a, y) for a in x])
-
-            # Partition the data according to the partitioning method
-            if self.partition_niid == 'kshard':
-                self.trainset = KShardDataPartitioner(
-                    all_trainset, self.sizes, shards=self.shards, seed = self.random_seed
-                ).use(self.dataset_id)
-            elif self.partition_niid == 'dirichlet':
-                self.trainset = DirichletDataPartitioner(
-                    all_trainset, sizes=self.sizes, seed = self.random_seed, alpha=self.alpha, num_classes=self.num_classes
-                ).use(self.dataset_id)
-            else:
-                raise NotImplementedError(
-                    "Partitioning method {} not implemented".format(self.partition_niid)
-                )
+            self.trainset = KShardDataPartitioner(
+                all_trainset, self.sizes, shards=self.shards, seed = self.random_seed
+            ).use(self.dataset_id)
+        else:
+            raise NotImplementedError(
+                "Partitioning method {} not implemented".format(self.partition_niid)
+            )
 
     def load_testset(self):
         """

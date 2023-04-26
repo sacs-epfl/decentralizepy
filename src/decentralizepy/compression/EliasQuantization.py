@@ -8,7 +8,7 @@ class EliasQuantization(Elias, Quantization):
 
     """
 
-    def __init__(self, k: int = 8, *args, **kwargs):
+    def __init__(self, k: int = 32767, *args, **kwargs):
         """
         Constructor
         Parameters

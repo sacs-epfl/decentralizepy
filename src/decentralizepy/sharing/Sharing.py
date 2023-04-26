@@ -107,6 +107,7 @@ class Sharing:
         flat = torch.cat(to_cat)
         data = dict()
         data["params"] = flat.numpy()
+        logging.info("Model sending this round: {}".format(data["params"]))
         return self.compress_data(data)
 
     def deserialized_model(self, m):
@@ -127,6 +128,7 @@ class Sharing:
         state_dict = dict()
         m = self.decompress_data(m)
         T = m["params"]
+        logging.info("Model; {}".format(T))
         start_index = 0
         for i, key in enumerate(self.model.state_dict()):
             end_index = start_index + self.lens[i]
@@ -170,6 +172,7 @@ class Sharing:
                         n, iteration
                     )
                 )
+                logging.info("Model from neighbor {} this round".format(n))
                 data = self.deserialized_model(data)
                 # Metro-Hastings
                 weight = 1 / (max(len(peer_deques), degree) + 1)

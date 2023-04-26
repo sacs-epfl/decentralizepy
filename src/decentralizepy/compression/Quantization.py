@@ -3,6 +3,7 @@
 import pickle
 
 import numpy as np
+import logging
 
 from decentralizepy.compression.Compression import Compression
 
@@ -13,7 +14,7 @@ class Quantization(Compression):
 
     """
 
-    def __init__(self, k: int = 8, *args, **kwargs):
+    def __init__(self, k: int = 32767, *args, **kwargs):
         """
         Constructor
         Parameters
