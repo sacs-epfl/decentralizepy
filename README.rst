@@ -54,12 +54,12 @@ Citing
 
 Cite us as ::
 
-   @misc{sacs:2022:decpy,
-	author={Rishi Sharma and others},
-	title={decentralizepy: An open-source decentralized learning research framework},
-	url={https://github.com/sacs-epfl/decentralizepy},
-	year={2022},
-   }
+    @article{dhasade2023decentralized,
+    title={Decentralized Learning Made Easy with DecentralizePy},
+    author={Dhasade, Akash and Kermarrec, Anne-Marie and Pires, Rafael and Sharma, Rishi and Vujasinovic, Milos},
+    journal={arXiv preprint arXiv:2304.08322},
+    year={2023}
+    }
 
 ------------
 Contributing
