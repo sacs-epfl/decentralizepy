@@ -14,6 +14,7 @@ class Dataset:
         rank: int,
         machine_id: int,
         mapping: Mapping,
+        random_seed: int = 1234,
         only_local=False,
         train_dir="",
         test_dir="",
@@ -32,6 +33,8 @@ class Dataset:
         mapping : decentralizepy.mappings.Mapping
             Mapping to convert rank, machine_id -> uid for data partitioning
             It also provides the total number of global processes
+        random_seed : int, optional
+            Random seed for the dataset
         only_local : bool, optional
             True if the dataset needs to be partioned only among local procs, False otherwise
         train_dir : str, optional
@@ -49,6 +52,7 @@ class Dataset:
         self.rank = rank
         self.machine_id = machine_id
         self.mapping = mapping
+        self.random_seed = random_seed
         self.uid = self.mapping.get_uid(rank, machine_id)
         self.only_local = only_local
         self.dataset_id = self.rank if self.only_local else self.uid

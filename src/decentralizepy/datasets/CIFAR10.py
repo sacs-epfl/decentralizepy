@@ -8,7 +8,12 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 from decentralizepy.datasets.Dataset import Dataset
-from decentralizepy.datasets.Partitioner import DataPartitioner, KShardDataPartitioner
+from decentralizepy.datasets.Partitioner import (
+    DataPartitioner,
+    DirichletDataPartitioner,
+    KShardDataPartitioner,
+    SimpleDataPartitioner
+)
 from decentralizepy.mappings.Mapping import Mapping
 from decentralizepy.models.Model import Model
 
@@ -39,8 +44,11 @@ class CIFAR10(Dataset):
             self.sizes[-1] += 1.0 - frac * self.num_partitions
             logging.debug("Size fractions: {}".format(self.sizes))
 
-        if not self.partition_niid:
-            self.trainset = DataPartitioner(trainset, self.sizes).use(self.dataset_id)
+        if not self.partition_niid or self.partition_niid == 'iid':
+            # IID partitioning
+            self.trainset = DataPartitioner(trainset, sizes = self.sizes, seed = self.random_seed).use(self.dataset_id)
+        elif self.partition_niid == 'simple':
+            self.trainset = SimpleDataPartitioner(trainset, sizes = self.sizes, seed = self.random_seed).use(self.dataset_id)
         else:
             train_data = {key: [] for key in range(10)}
             for x, y in trainset:
@@ -48,9 +56,20 @@ class CIFAR10(Dataset):
             all_trainset = []
             for y, x in train_data.items():
                 all_trainset.extend([(a, y) for a in x])
-            self.trainset = KShardDataPartitioner(
-                all_trainset, self.sizes, shards=self.shards
-            ).use(self.dataset_id)
+
+            # Partition the data according to the partitioning method
+            if self.partition_niid == 'kshard':
+                self.trainset = KShardDataPartitioner(
+                    all_trainset, self.sizes, shards=self.shards, seed = self.random_seed
+                ).use(self.dataset_id)
+            elif self.partition_niid == 'dirichlet':
+                self.trainset = DirichletDataPartitioner(
+                    all_trainset, sizes=self.sizes, seed = self.random_seed, alpha=self.alpha, num_classes=self.num_classes
+                ).use(self.dataset_id)
+            else:
+                raise NotImplementedError(
+                    "Partitioning method {} not implemented".format(self.partition_niid)
+                )
 
     def load_testset(self):
         """
@@ -68,12 +87,14 @@ class CIFAR10(Dataset):
         rank: int,
         machine_id: int,
         mapping: Mapping,
+        random_seed: int = 1234,
         only_local=False,
         train_dir="",
         test_dir="",
         sizes="",
         test_batch_size=1024,
-        partition_niid=False,
+        partition_niid='simple',
+        alpha=100,
         shards=1,
     ):
         """
@@ -88,6 +109,8 @@ class CIFAR10(Dataset):
         mapping : decentralizepy.mappings.Mapping
             Mapping to convert rank, machine_id -> uid for data partitioning
             It also provides the total number of global processes
+        random_seed : int, optional
+            Random seed for the dataset
         only_local : bool, optional
             True if the dataset needs to be partioned only among local procs, False otherwise
         train_dir : str, optional
@@ -100,16 +123,19 @@ class CIFAR10(Dataset):
             By default, each process gets an equal amount.
         test_batch_size : int, optional
             Batch size during testing. Default value is 64
-        partition_niid: bool, optional
-            When True, partitions dataset in a non-iid way
+        partition_niid: string, optional
+            One of 'simple', 'kshard', 'dirichlet'
+        alpha: float, optional
+            Parameter for Dirichlet Partitioner
         shards: int, optional
-            Number of shards each node receives
+            Number of shards for KShard Partitioner
 
         """
         super().__init__(
             rank,
             machine_id,
             mapping,
+            random_seed,
             only_local,
             train_dir,
             test_dir,
@@ -120,6 +146,7 @@ class CIFAR10(Dataset):
         self.num_classes = NUM_CLASSES
 
         self.partition_niid = partition_niid
+        self.alpha = alpha
         self.shards = shards
         self.transform = transforms.Compose(
             [
@@ -186,14 +213,14 @@ class CIFAR10(Dataset):
         model : decentralizepy.models.Model
             Model to evaluate
         loss : torch.nn.loss
-            Loss function to evaluate
+            Loss function to use
 
         Returns
         -------
-        tuple
-            (accuracy, loss_value)
+        tuple(float, float)
 
         """
+        model.eval()
         testloader = self.get_testset()
 
         logging.debug("Test Loader instantiated.")

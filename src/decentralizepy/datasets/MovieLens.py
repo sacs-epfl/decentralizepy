@@ -21,6 +21,7 @@ class MovieLens(Dataset):
         rank: int,
         machine_id: int,
         mapping: Mapping,
+        random_seed: int = 1234,
         only_local=False,
         train_dir="",
         test_dir="",
@@ -39,6 +40,8 @@ class MovieLens(Dataset):
         mapping : decentralizepy.mappings.Mapping
             Mapping to convert rank, machine_id -> uid for data partitioning
             It also provides the total number of global processes
+        random_seed : int, optional
+            Random seed for the dataset
         only_local : bool, optional
             True if the dataset needs to be partioned only among local procs, False otherwise
         train_dir : str, optional
@@ -57,6 +60,7 @@ class MovieLens(Dataset):
             rank,
             machine_id,
             mapping,
+            random_seed,
             only_local,
             train_dir,
             test_dir,
