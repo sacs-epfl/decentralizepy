@@ -38,6 +38,12 @@ Setting up decentralizepy
 * Install decentralizepy for development. (bash) ::
 
     pip3 install --editable .[dev]
+
+* Download CIFAR-10 using ``download_dataset.py``. ::
+
+    python3 download_dataset.py
+
+* (Optional) Download other datasets from LEAF <https://github.com/TalwalkarLab/leaf> and place them in ``eval/data/``.
  
 ----------------
 Running the code

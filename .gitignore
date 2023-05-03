@@ -8,6 +8,6 @@
 **/leaf/
 **.egg-info
 202**
-eval/cifar**
+eval/data**
 **/massif.out*
 *swp

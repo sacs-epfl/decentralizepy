@@ -57,8 +57,9 @@ class DPSGDNodeFederated(Node):
             self.trainer.train(self.dataset)
 
             # Send update to server
-            to_send = self.sharing.get_data_to_send(degree=len(self.my_neighbors))
+            to_send = self.sharing.get_data_to_send()
             to_send["CHANNEL"] = "DPSGD"
+            to_send["iteration"] = iteration
             self.communication.send(self.parameter_server_uid, to_send)
 
             if self.participated > 0:
