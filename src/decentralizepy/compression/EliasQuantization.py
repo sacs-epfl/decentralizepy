@@ -8,13 +8,14 @@ class EliasQuantization(Elias, Quantization):
 
     """
 
-    def __init__(self, k: int = 32767, *args, **kwargs):
+    def __init__(self, float_precision: int= 2**15-1 , *args, **kwargs):
         """
         Constructor
+        
         Parameters
         ----------
-        k : int, optional
+        float_precision : int, optional
             Quantization parameter
         """
-        super().__init__(k)
-        self.k = k
+        super().__init__(float_precision=float_precision, *args, **kwargs)
+        self.k = float_precision

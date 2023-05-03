@@ -23,6 +23,7 @@ class Sharing:
         compress=False,
         compression_package=None,
         compression_class=None,
+        float_precision=None,
     ):
         """
         Constructor
@@ -71,7 +72,7 @@ class Sharing:
         if compression_package and compression_class:
             compressor_module = importlib.import_module(compression_package)
             compressor_class = getattr(compressor_module, compression_class)
-            self.compressor = compressor_class()
+            self.compressor = compressor_class(float_precision=float_precision)
             logging.debug(f"Using the {compressor_class} to compress the data")
         else:
             assert not self.compress
@@ -128,7 +129,6 @@ class Sharing:
         state_dict = dict()
         m = self.decompress_data(m)
         T = m["params"]
-        logging.info("Model; {}".format(T))
         start_index = 0
         for i, key in enumerate(self.model.state_dict()):
             end_index = start_index + self.lens[i]
@@ -172,7 +172,6 @@ class Sharing:
                         n, iteration
                     )
                 )
-                logging.info("Model from neighbor {} this round".format(n))
                 data = self.deserialized_model(data)
                 # Metro-Hastings
                 weight = 1 / (max(len(peer_deques), degree) + 1)

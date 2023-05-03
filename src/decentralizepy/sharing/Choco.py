@@ -278,6 +278,7 @@ class Choco(Sharing):
         compress=False,
         compression_package=None,
         compression_class=None,
+        float_precision=None,
     ):
         """
         Constructor
@@ -318,6 +319,7 @@ class Choco(Sharing):
             compress,
             compression_package,
             compression_class,
+            float_precision,
         )
         self.step_size = step_size
         self.alpha = alpha

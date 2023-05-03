@@ -11,10 +11,17 @@ class EliasFpzipLossy(Elias):
 
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, float_precision=16, *args, **kwargs):
         """
         Constructor
+
+        Parameters
+        ----------
+        float_precision : int, optional
+            Precision of the compression, by default 16
+
         """
+        self.float_precision = float_precision
 
     def compress_float(self, arr):
         """
@@ -31,7 +38,7 @@ class EliasFpzipLossy(Elias):
             encoded data as bytes
 
         """
-        return fpzip.compress(arr, precision=18, order="C")
+        return fpzip.compress(arr, precision=self.float_precision, order="C")
 
     def decompress_float(self, bytes):
         """

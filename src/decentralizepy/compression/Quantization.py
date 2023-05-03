@@ -3,7 +3,6 @@
 import pickle
 
 import numpy as np
-import logging
 
 from decentralizepy.compression.Compression import Compression
 
@@ -14,16 +13,17 @@ class Quantization(Compression):
 
     """
 
-    def __init__(self, k: int = 32767, *args, **kwargs):
+    def __init__(self, float_precision: int = 2**15-1, *args, **kwargs):
         """
         Constructor
+        
         Parameters
         ----------
-        k : int, optional
+        float_precision : int, optional
             Quantization parameter
         """
-        super().__init__()
-        self.k = k
+        super().__init__(*args, **kwargs)
+        self.k = float_precision
 
     def compress_float(self, x):
         """
@@ -42,8 +42,8 @@ class Quantization(Compression):
         """
 
         # Compute scale factor
-        # scale_factor = np.mean(np.abs(x))/self.k
-        scale_factor = np.max(np.abs(x)) / self.k
+        scale_factor = np.mean(np.abs(x)) / self.k
+        # scale_factor = np.max(np.abs(x)) / self.k
 
         # Normalize x to [-k, k]
         norm_factor = np.max(np.abs(x)) / self.k

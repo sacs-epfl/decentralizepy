@@ -34,6 +34,7 @@ class SubSampling(Sharing):
         compress=False,
         compression_package=None,
         compression_class=None,
+        float_precision=None,
     ):
         """
         Constructor
@@ -80,6 +81,7 @@ class SubSampling(Sharing):
             compress,
             compression_package,
             compression_class,
+            float_precision,
         )
         self.alpha = alpha
         self.dict_ordered = dict_ordered
