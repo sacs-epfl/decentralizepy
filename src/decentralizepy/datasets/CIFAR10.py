@@ -53,7 +53,9 @@ class CIFAR10(Dataset):
             self.trainset = DirichletDataPartitioner(
                 trainset, sizes=self.sizes, seed = self.random_seed, alpha=self.alpha, num_classes=self.num_classes
             ).use(self.dataset_id)
-        elif self.partition_niid == 'kshard':
+        elif self.partition_niid == 'kshard' or str(self.partition_niid) == 'True': # Backward compatibility
+            if str(self.partition_niid) == 'True':
+                logging.warn("Using True as partition_niid is deprecated. Use kshard instead. Will be removed in future versions.")
             train_data = {key: [] for key in range(self.num_classes)}
             for x, y in trainset:
                 train_data[y].append(x)
