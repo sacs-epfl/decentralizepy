@@ -41,13 +41,18 @@ Setting up decentralizepy
 
 * Download CIFAR-10 using ``download_dataset.py``. ::
 
-    python3 download_dataset.py
+    python download_dataset.py
 
 * (Optional) Download other datasets from LEAF <https://github.com/TalwalkarLab/leaf> and place them in ``eval/data/``.
  
 ----------------
 Running the code
 ----------------
+
+* Follow the tutorial in ``tutorial/``. OR,
+* Generate a new graph file with the required topology using ``generate_graph.py``. ::
+
+    python generate_graph.py --help
 
 * Choose and modify one of the config files in ``eval/{step,epoch}_configs``.
 * Modify the dataset paths and ``addresses_filepath`` in the config file.

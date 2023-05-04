@@ -21,7 +21,7 @@ class SmallWorld(Graph):
             total number of nodes in the graph
         k_over_2 : int
             k_over_2 config for smallworld
-        beta : int
+        beta : float
             beta config for smallworld. β = 1 is truly equal to the Erdős-Rényi network model
 
         """

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 decpy_path=../eval # Path to eval folder
-graph=regular_16.txt # Absolute path of the graph file
+graph=regular_16.txt # Absolute path of the graph file generated using the generate_graph.py script
 run_path=../eval/data # Path to the folder where the graph and config file will be copied and the results will be stored
 config_file=config.ini
 cp $graph $config_file $run_path
