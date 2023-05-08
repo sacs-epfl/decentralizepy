@@ -65,12 +65,22 @@ Citing
 
 Cite us as ::
 
-    @article{dhasade2023decentralized,
-    title={Decentralized Learning Made Easy with DecentralizePy},
-    author={Dhasade, Akash and Kermarrec, Anne-Marie and Pires, Rafael and Sharma, Rishi and Vujasinovic, Milos},
-    journal={arXiv preprint arXiv:2304.08322},
-    year={2023}
-    }
+    @inproceedings{decentralizepy,
+   author = {Dhasade, Akash and Kermarrec, Anne-Marie and Pires, Rafael and Sharma, Rishi and Vujasinovic, Milos},
+   title = {Decentralized Learning Made Easy with DecentralizePy},
+   year = {2023},
+   isbn = {9798400700842},
+   publisher = {Association for Computing Machinery},
+   address = {New York, NY, USA},
+   url = {https://doi.org/10.1145/3578356.3592587},
+   doi = {10.1145/3578356.3592587},
+   booktitle = {Proceedings of the 3rd Workshop on Machine Learning and Systems},
+   pages = {34–41},
+   numpages = {8},
+   keywords = {peer-to-peer, distributed systems, machine learning, middleware, decentralized learning, network topology},
+   location = {Rome, Italy},
+   series = {EuroMLSys '23}
+   }
 
 ------------
 Contributing
