@@ -53,7 +53,7 @@ if __name__ == "__main__":
         k_over_2 = None
         beta = None
         file_name = None
-        type_adjacency = "adjacency"
+        type_adjacency = "edges"
 
         for currentArgument, currentValue in arguments:
             if currentArgument in ("-h", "--help"):
