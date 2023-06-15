@@ -25,7 +25,7 @@ class STCClient(Node):
 
         """
         sender, data = None, None
-        iteration=0
+        iteration = 0
         while len(self.barrier):
             self.sharing.process_received(data)
 

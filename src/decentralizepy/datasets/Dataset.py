@@ -20,6 +20,7 @@ class Dataset:
         test_dir="",
         sizes="",
         test_batch_size="",
+        validation_size="",
     ):
         """
         Constructor which reads the data files, instantiates and partitions the dataset
@@ -47,7 +48,8 @@ class Dataset:
             By default, each process gets an equal amount.
         test_batch_size : int, optional
             Batch size during testing. Default value is 64
-
+        validation_size : int, optional
+            size of the test set used as validation set
         """
         self.rank = rank
         self.machine_id = machine_id
@@ -66,6 +68,7 @@ class Dataset:
         self.sizes = utils.conditional_value(sizes, "", None)
         self.test_batch_size = utils.conditional_value(test_batch_size, "", 64)
         self.num_classes = None
+        self.validation_size = utils.conditional_value(validation_size, "", None)
         if self.sizes:
             if type(self.sizes) == str:
                 self.sizes = eval(self.sizes)
@@ -79,6 +82,11 @@ class Dataset:
             self.__testing__ = True
         else:
             self.__testing__ = False
+
+        if self.validation_size:
+            self.__validating__ = True
+        else:
+            self.__validating__ = False
 
         self.label_distribution = None
 
@@ -111,6 +119,22 @@ class Dataset:
         raise NotImplementedError
 
     def get_testset(self):
+        """
+        Function to get the test set
+
+        Returns
+        -------
+        torch.utils.Dataset(decentralizepy.datasets.Data)
+
+        Raises
+        ------
+        RuntimeError
+            If the test set was not initialized
+
+        """
+        raise NotImplementedError
+
+    def get_validationset(self):
         """
         Function to get the test set
 

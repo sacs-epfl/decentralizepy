@@ -91,7 +91,7 @@ class PartialModel(Sharing):
             compress,
             compression_package,
             compression_class,
-            float_precision
+            float_precision,
         )
         self.alpha = alpha
         self.dict_ordered = dict_ordered
@@ -374,11 +374,7 @@ class PartialModel(Sharing):
         output_dict["tensor"] = v.tolist()
 
         with open(
-            os.path.join(
-                s,
-                "{}.json".format(self.communication_round + 1),
-            ),
-            "w",
+            os.path.join(s, "{}.json".format(self.communication_round + 1),), "w",
         ) as of:
             json.dump(output_dict, of)
 

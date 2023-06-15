@@ -5,8 +5,8 @@ import math
 import os
 import random
 from collections import deque
-import torch
 
+import torch
 from matplotlib import pyplot as plt
 
 from decentralizepy import utils
@@ -160,7 +160,13 @@ class STCServer(Node):
         torch.manual_seed(random_seed)
         self.dataset_params = utils.remove_keys(
             dataset_configs,
-            ["dataset_package", "dataset_class", "model_class", "random_seed", "train_dir"],
+            [
+                "dataset_package",
+                "dataset_class",
+                "model_class",
+                "random_seed",
+                "train_dir",
+            ],
         )
         self.dataset = self.dataset_class(
             self.rank, self.machine_id, self.mapping, **self.dataset_params
@@ -260,10 +266,7 @@ class STCServer(Node):
 
         """
         for k in self.current_workers:
-            if (
-                (k not in self.peer_deques)
-                or len(self.peer_deques[k]) == 0
-            ):
+            if (k not in self.peer_deques) or len(self.peer_deques[k]) == 0:
                 return False
         return True
 

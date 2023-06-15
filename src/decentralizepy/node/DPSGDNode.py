@@ -131,6 +131,8 @@ class DPSGDNode(Node):
                     "train_loss": {},
                     "test_loss": {},
                     "test_acc": {},
+                    "validation_loss": {},
+                    "validation_acc": {},
                     "total_bytes": {},
                     "total_meta": {},
                     "total_data_per_n": {},
@@ -166,6 +168,11 @@ class DPSGDNode(Node):
                 ta, tl = self.dataset.test(self.model, self.loss)
                 results_dict["test_acc"][iteration + 1] = ta
                 results_dict["test_loss"][iteration + 1] = tl
+                if self.dataset.__validating__:
+                    logging.info("Evaluating on the validation set")
+                    va, vl = self.dataset.validate(self.model, self.loss)
+                    results_dict["validation_acc"][iteration + 1] = va
+                    results_dict["validation_loss"][iteration + 1] = vl
 
                 if global_epoch == 49:
                     change *= 2

@@ -1,9 +1,11 @@
-from decentralizepy.graphs.Regular import Regular
+import getopt
+import sys
+
 from decentralizepy.graphs.FullyConnected import FullyConnected
+from decentralizepy.graphs.Regular import Regular
 from decentralizepy.graphs.Ring import Ring
 from decentralizepy.graphs.SmallWorld import SmallWorld
 from decentralizepy.graphs.Star import Star
-import getopt, sys
 
 if __name__ == "__main__":
     """
@@ -41,7 +43,17 @@ if __name__ == "__main__":
 
     options = "hg:n:s:d:k:b:f:a"
 
-    long_options = ["graph=", "nodes=", "seed=", "degree=", "kover2=", "beta=", "file=", "adjacency", "help"]
+    long_options = [
+        "graph=",
+        "nodes=",
+        "seed=",
+        "degree=",
+        "kover2=",
+        "beta=",
+        "file=",
+        "adjacency",
+        "help",
+    ]
 
     try:
         arguments, values = getopt.getopt(argumentList, options, long_options)
@@ -75,20 +87,19 @@ if __name__ == "__main__":
                 file_name = currentValue
             elif currentArgument in ("-a", "--adjacency"):
                 type_adjacency = "adjacency"
-    
-        if graph_type == 'Regular':
+
+        if graph_type == "Regular":
             g = Regular(num_nodes, degree, seed)
-        elif graph_type == 'FullyConnected':
+        elif graph_type == "FullyConnected":
             g = FullyConnected(num_nodes)
-        elif graph_type == 'Ring':
+        elif graph_type == "Ring":
             g = Ring(num_nodes)
-        elif graph_type == 'SmallWorld':
+        elif graph_type == "SmallWorld":
             g = SmallWorld(num_nodes, k_over_2, beta)
-        elif graph_type == 'Star':
+        elif graph_type == "Star":
             g = Star(num_nodes)
         else:
             raise ValueError("Invalid graph type: " + graph_type)
-        
 
         if file_name is not None:
             g.write_graph_to_file(file_name, type=type_adjacency)

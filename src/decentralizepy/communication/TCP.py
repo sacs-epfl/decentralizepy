@@ -1,10 +1,9 @@
 import json
 import logging
 import pickle
+import socket
 from collections import deque
 from time import sleep
-
-import socket
 
 import zmq
 

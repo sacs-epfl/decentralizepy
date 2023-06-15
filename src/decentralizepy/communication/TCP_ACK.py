@@ -2,13 +2,12 @@ import json
 import logging
 import pickle
 import queue
+import socket
 from collections import deque
 from threading import Event, Lock, Thread
 from time import sleep
 
 import zmq
-
-import socket
 
 from decentralizepy.communication.Communication import Communication
 

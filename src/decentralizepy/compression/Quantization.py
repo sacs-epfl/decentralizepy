@@ -13,7 +13,7 @@ class Quantization(Compression):
 
     """
 
-    def __init__(self, float_precision: int = 2**15-1, *args, **kwargs):
+    def __init__(self, float_precision: int = 2 ** 15 - 1, *args, **kwargs):
         """
         Constructor
         

@@ -12,7 +12,7 @@ from decentralizepy.datasets.Partitioner import (
     DataPartitioner,
     DirichletDataPartitioner,
     KShardDataPartitioner,
-    SimpleDataPartitioner
+    SimpleDataPartitioner,
 )
 from decentralizepy.mappings.Mapping import Mapping
 from decentralizepy.models.Model import Model
@@ -44,18 +44,30 @@ class CIFAR10(Dataset):
             self.sizes[-1] += 1.0 - frac * self.num_partitions
             logging.debug("Size fractions: {}".format(self.sizes))
 
-        if not self.partition_niid or self.partition_niid == 'iid':
+        if not self.partition_niid or self.partition_niid == "iid":
             # IID partitioning
-            self.trainset = DataPartitioner(trainset, sizes = self.sizes, seed = self.random_seed).use(self.dataset_id)
-        elif self.partition_niid == 'simple':
-            self.trainset = SimpleDataPartitioner(trainset, sizes = self.sizes, seed = self.random_seed).use(self.dataset_id)
-        elif self.partition_niid == 'dirichlet':
-            self.trainset = DirichletDataPartitioner(
-                trainset, sizes=self.sizes, seed = self.random_seed, alpha=self.alpha, num_classes=self.num_classes
+            self.trainset = DataPartitioner(
+                trainset, sizes=self.sizes, seed=self.random_seed
             ).use(self.dataset_id)
-        elif self.partition_niid == 'kshard' or str(self.partition_niid) == 'True': # Backward compatibility
-            if str(self.partition_niid) == 'True':
-                logging.warn("Using True as partition_niid is deprecated. Use kshard instead. Will be removed in future versions.")
+        elif self.partition_niid == "simple":
+            self.trainset = SimpleDataPartitioner(
+                trainset, sizes=self.sizes, seed=self.random_seed
+            ).use(self.dataset_id)
+        elif self.partition_niid == "dirichlet":
+            self.trainset = DirichletDataPartitioner(
+                trainset,
+                sizes=self.sizes,
+                seed=self.random_seed,
+                alpha=self.alpha,
+                num_classes=self.num_classes,
+            ).use(self.dataset_id)
+        elif (
+            self.partition_niid == "kshard" or str(self.partition_niid) == "True"
+        ):  # Backward compatibility
+            if str(self.partition_niid) == "True":
+                logging.warn(
+                    "Using True as partition_niid is deprecated. Use kshard instead. Will be removed in future versions."
+                )
             train_data = {key: [] for key in range(self.num_classes)}
             for x, y in trainset:
                 train_data[y].append(x)
@@ -63,7 +75,7 @@ class CIFAR10(Dataset):
             for y, x in train_data.items():
                 all_trainset.extend([(a, y) for a in x])
             self.trainset = KShardDataPartitioner(
-                all_trainset, self.sizes, shards=self.shards, seed = self.random_seed
+                all_trainset, self.sizes, shards=self.shards, seed=self.random_seed
             ).use(self.dataset_id)
         else:
             raise NotImplementedError(
@@ -81,6 +93,18 @@ class CIFAR10(Dataset):
             root=self.test_dir, train=False, download=True, transform=self.transform
         )
 
+    def load_validationset(self):
+        """
+        Loads the validation set
+        """
+        logging.info("Loading validation set.")
+
+        self.validationset, self.testset = torch.utils.data.random_split(
+            self.testset,
+            [self.validation_size, 1 - self.validation_size],
+            torch.Generator().manual_seed(self.random_seed),
+        )
+
     def __init__(
         self,
         rank: int,
@@ -92,9 +116,10 @@ class CIFAR10(Dataset):
         test_dir="",
         sizes="",
         test_batch_size=1024,
-        partition_niid='simple',
+        partition_niid="simple",
         alpha=100,
         shards=1,
+        validation_size="",
     ):
         """
         Constructor which reads the data files, instantiates and partitions the dataset
@@ -128,7 +153,8 @@ class CIFAR10(Dataset):
             Parameter for Dirichlet Partitioner
         shards: int, optional
             Number of shards for KShard Partitioner
-
+        validation_size: int, optional
+            Fraction of the testset used as validation set
         """
         super().__init__(
             rank,
@@ -140,6 +166,7 @@ class CIFAR10(Dataset):
             test_dir,
             sizes,
             test_batch_size,
+            validation_size,
         )
 
         self.num_classes = NUM_CLASSES
@@ -160,7 +187,8 @@ class CIFAR10(Dataset):
         if self.__testing__:
             self.load_testset()
 
-        # TODO: Add Validation
+        if self.__validating__:
+            self.load_validationset()
 
     def get_trainset(self, batch_size=1, shuffle=False):
         """
@@ -202,6 +230,24 @@ class CIFAR10(Dataset):
         if self.__testing__:
             return DataLoader(self.testset, batch_size=self.test_batch_size)
         raise RuntimeError("Test set not initialized!")
+
+    def get_validationset(self):
+        """
+        Function to get the validation set
+
+        Returns
+        -------
+        torch.utils.Dataset(decentralizepy.datasets.Data)
+
+        Raises
+        ------
+        RuntimeError
+            If the test set was not initialized
+
+        """
+        if self.__validating__:
+            return DataLoader(self.validationset, batch_size=self.test_batch_size)
+        raise RuntimeError("Validation set not initialized!")
 
     def test(self, model, loss):
         """
@@ -257,7 +303,64 @@ class CIFAR10(Dataset):
 
         accuracy = 100 * float(total_correct) / total_predicted
         loss_val = loss_val / count
-        logging.info("Overall accuracy is: {:.1f} %".format(accuracy))
+        logging.info("Overall test accuracy is: {:.1f} %".format(accuracy))
+        return accuracy, loss_val
+
+    def validate(self, model, loss):
+        """
+        Function to evaluate model on the validation dataset.
+
+        Parameters
+        ----------
+        model : decentralizepy.models.Model
+            Model to evaluate
+        loss : torch.nn.loss
+            Loss function to use
+
+        Returns
+        -------
+        tuple(float, float)
+
+        """
+        model.eval()
+        validationloader = self.get_validationset()
+
+        logging.debug("Validation Loader instantiated.")
+
+        correct_pred = [0 for _ in range(NUM_CLASSES)]
+        total_pred = [0 for _ in range(NUM_CLASSES)]
+
+        total_correct = 0
+        total_predicted = 0
+
+        with torch.no_grad():
+            loss_val = 0.0
+            count = 0
+            for elems, labels in validationloader:
+                outputs = model(elems)
+                loss_val += loss(outputs, labels).item()
+                count += 1
+                _, predictions = torch.max(outputs, 1)
+                for label, prediction in zip(labels, predictions):
+                    logging.debug("{} predicted as {}".format(label, prediction))
+                    if label == prediction:
+                        correct_pred[label] += 1
+                        total_correct += 1
+                    total_pred[label] += 1
+                    total_predicted += 1
+
+        logging.debug("Predicted on the validation set")
+
+        for key, value in enumerate(correct_pred):
+            if total_pred[key] != 0:
+                accuracy = 100 * float(value) / total_pred[key]
+            else:
+                accuracy = 100.0
+            logging.debug("Accuracy for class {} is: {:.1f} %".format(key, accuracy))
+
+        accuracy = 100 * float(total_correct) / total_predicted
+        loss_val = loss_val / count
+        logging.info("Overall validation accuracy is: {:.1f} %".format(accuracy))
         return accuracy, loss_val
 
 
@@ -351,22 +454,33 @@ class LeNet(Model):
         x = self.fc1(x)
         return x
 
-# Taken from: https://github.com/gong-xuan/FedKD/blob/master/models/resnet8.py    
+
+# Taken from: https://github.com/gong-xuan/FedKD/blob/master/models/resnet8.py
 class BasicBlock(nn.Module):
     expansion = 1
 
     def __init__(self, in_planes, planes, stride=1):
         super(BasicBlock, self).__init__()
-        self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(
+            in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False
+        )
         self.bn1 = nn.BatchNorm2d(planes)
-        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv2 = nn.Conv2d(
+            planes, planes, kernel_size=3, stride=1, padding=1, bias=False
+        )
         self.bn2 = nn.BatchNorm2d(planes)
 
         self.shortcut = nn.Sequential()
-        if stride != 1 or in_planes != self.expansion*planes:
+        if stride != 1 or in_planes != self.expansion * planes:
             self.shortcut = nn.Sequential(
-                nn.Conv2d(in_planes, self.expansion*planes, kernel_size=1, stride=stride, bias=False),
-                nn.BatchNorm2d(self.expansion*planes)
+                nn.Conv2d(
+                    in_planes,
+                    self.expansion * planes,
+                    kernel_size=1,
+                    stride=stride,
+                    bias=False,
+                ),
+                nn.BatchNorm2d(self.expansion * planes),
             )
 
     def forward(self, x):
@@ -376,26 +490,27 @@ class BasicBlock(nn.Module):
         out = F.relu(out)
         return out
 
+
 class ResNet8(Model):
     def __init__(self, num_classes=10):
         super(ResNet8, self).__init__()
         block = BasicBlock
-        num_blocks = [1,1,1]
+        num_blocks = [1, 1, 1]
         self.num_classes = num_classes
         self.in_planes = 128
 
         self.conv1 = nn.Conv2d(3, 128, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(128)
-        self.layer1 = self._make_layer(block,  128, num_blocks[0], stride=1)
+        self.layer1 = self._make_layer(block, 128, num_blocks[0], stride=1)
         self.layer2 = self._make_layer(block, 256, num_blocks[1], stride=2)
         self.layer3 = self._make_layer(block, 512, num_blocks[2], stride=2)
-        self.linear1 = nn.Linear(2048, num_classes) 
+        self.linear1 = nn.Linear(2048, num_classes)
         self.linear2 = nn.Linear(2048, num_classes)
         self.emb = nn.Embedding(num_classes, num_classes)
         self.emb.weight = nn.Parameter(torch.eye(num_classes))
 
     def _make_layer(self, block, planes, num_blocks, stride):
-        strides = [stride] + [1]*(num_blocks-1)
+        strides = [stride] + [1] * (num_blocks - 1)
         layers = []
         for stride in strides:
             layers.append(block(self.in_planes, planes, stride))
@@ -404,36 +519,36 @@ class ResNet8(Model):
 
     def forward(self, x):
         out = F.relu(self.bn1(self.conv1(x)))
-        out = self.layer1(out) #b*128*32*32
-        out = self.layer2(out)#b*256*16*16
-        out = self.layer3(out) #b*512*8*8
+        out = self.layer1(out)  # b*128*32*32
+        out = self.layer2(out)  # b*256*16*16
+        out = self.layer3(out)  # b*512*8*8
         self.inner = out
         out = F.avg_pool2d(out, 4)
         out = out.view(out.size(0), -1)
-        
-        self.flatten_feat = out #b*2048
+
+        self.flatten_feat = out  # b*2048
         out = self.linear1(out)
         return out
 
     def get_attentions(self):
-        inner_copy = self.inner.detach().clone()#b*512*8*8
+        inner_copy = self.inner.detach().clone()  # b*512*8*8
         inner_copy.requires_grad = True
-        out = F.avg_pool2d(inner_copy, 4)#b*512*2*2
-        out = out.view(out.size(0), -1)#b*2048
-        out = self.linear1(out)#b*num_classes
-        losses = out.sum(dim=0)# num_classes
+        out = F.avg_pool2d(inner_copy, 4)  # b*512*2*2
+        out = out.view(out.size(0), -1)  # b*2048
+        out = self.linear1(out)  # b*num_classes
+        losses = out.sum(dim=0)  # num_classes
         cams = []
-        #import ipdb;ipdb.set_trace()
-        #assert losses.shape ==self.num_classes
+        # import ipdb;ipdb.set_trace()
+        # assert losses.shape ==self.num_classes
         for n in range(self.num_classes):
             loss = losses[n]
             self.zero_grad()
-            if n<self.num_classes-1:
+            if n < self.num_classes - 1:
                 loss.backward(retain_graph=True)
             else:
                 loss.backward()
             grads_val = inner_copy.grad
-            weights = grads_val.mean(dim=(2, 3), keepdim=True)#b*512*1*1
-            cams.append(F.relu((weights.detach() * self.inner).sum(dim=1)))#b*8*8
+            weights = grads_val.mean(dim=(2, 3), keepdim=True)  # b*512*1*1
+            cams.append(F.relu((weights.detach() * self.inner).sum(dim=1)))  # b*8*8
         atts = torch.stack(cams, dim=1)
         return atts
