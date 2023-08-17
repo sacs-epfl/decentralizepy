@@ -65,7 +65,7 @@ class Model(nn.Module):
 
     def dump_weights(self, directory, uid, round):
         """
-        dumps the current model as a pickle file into the specified direcectory
+        saves the current model as a pt file into the specified direcectory
 
         Parameters
         ----------
@@ -77,14 +77,7 @@ class Model(nn.Module):
             current round, will be used to give the weight a unique name
 
         """
-        with torch.no_grad():
-            tensors_to_cat = []
-            for _, v in self.state_dict().items():
-                tensors_to_cat.append(v.flatten())
-            flat = torch.cat(tensors_to_cat)
-
-        with open(Path(directory) / f"{round}_weight_{uid}.pk", "wb") as f:
-            pickle.dump(flat, f)
+        torch.save(self.state_dict(), Path(directory) / f"{round}_weight_{uid}.pt")
 
     def get_weights(self):
         """

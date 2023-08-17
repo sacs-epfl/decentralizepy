@@ -35,6 +35,14 @@ class CIFAR10(Dataset):
         trainset = torchvision.datasets.CIFAR10(
             root=self.train_dir, train=True, download=True, transform=self.transform
         )
+
+        if self.__validating__ and self.validation_source == "Train":
+            logging.info("Extracting the validation set from the train set.")
+            self.validationset, trainset = torch.utils.data.random_split(
+                trainset, [self.validation_size, 1-self.validation_size],
+                torch.Generator().manual_seed(self.random_seed),
+            )
+
         c_len = len(trainset)
 
         if self.sizes == None:  # Equal distribution of data among processes
@@ -93,17 +101,12 @@ class CIFAR10(Dataset):
             root=self.test_dir, train=False, download=True, transform=self.transform
         )
 
-    def load_validationset(self):
-        """
-        Loads the validation set
-        """
-        logging.info("Loading validation set.")
-
-        self.validationset, self.testset = torch.utils.data.random_split(
-            self.testset,
-            [self.validation_size, 1 - self.validation_size],
-            torch.Generator().manual_seed(self.random_seed),
-        )
+        if self.__validating__ and self.validation_source == "Test":
+            logging.info("Extracting the validation set from the test set.")
+            self.validationset, self.testset = torch.utils.data.random_split(
+                self.testset, [self.validation_size, 1-self.validation_size],
+                torch.Generator().manual_seed(self.random_seed)
+            )
 
     def __init__(
         self,
@@ -119,6 +122,7 @@ class CIFAR10(Dataset):
         partition_niid="simple",
         alpha=100,
         shards=1,
+        validation_source="",
         validation_size="",
     ):
         """
@@ -153,8 +157,10 @@ class CIFAR10(Dataset):
             Parameter for Dirichlet Partitioner
         shards: int, optional
             Number of shards for KShard Partitioner
+        validation_source: string, optional
+            Source of validation set. One of 'Test', 'Train'
         validation_size: int, optional
-            Fraction of the testset used as validation set
+            Fraction of the Test or Train set used as validation set
         """
         super().__init__(
             rank,
@@ -166,6 +172,7 @@ class CIFAR10(Dataset):
             test_dir,
             sizes,
             test_batch_size,
+            validation_source,
             validation_size,
         )
 
@@ -187,8 +194,6 @@ class CIFAR10(Dataset):
         if self.__testing__:
             self.load_testset()
 
-        if self.__validating__:
-            self.load_validationset()
 
     def get_trainset(self, batch_size=1, shuffle=False):
         """
