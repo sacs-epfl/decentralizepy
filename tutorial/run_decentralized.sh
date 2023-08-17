@@ -8,8 +8,8 @@ cp $graph $config_file $run_path
 
 env_python=~/anaconda3/envs/dpy/bin/python3 # Path to python executable of the environment | conda recommended
 machines=1 # number of machines in the runtime
-iterations=80
-test_after=20
+iterations=2
+test_after=1
 eval_file=$decpy_path/testing.py # decentralized driver code (run on each machine)
 log_level=INFO # DEBUG | INFO | WARN | CRITICAL
 

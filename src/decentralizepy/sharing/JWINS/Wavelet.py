@@ -156,11 +156,17 @@ class Wavelet(PartialModel):
         if self.change_based_selection:
             diff = self.model.model_change
             _, index = torch.topk(
-                diff.abs(), round(self.alpha * len(diff)), dim=0, sorted=False,
+                diff.abs(),
+                round(self.alpha * len(diff)),
+                dim=0,
+                sorted=False,
             )
         else:
             _, index = torch.topk(
-                data.abs(), round(self.alpha * len(data)), dim=0, sorted=False,
+                data.abs(),
+                round(self.alpha * len(data)),
+                dim=0,
+                sorted=False,
             )
         index, _ = torch.sort(index)
         return data[index], index

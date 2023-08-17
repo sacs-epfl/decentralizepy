@@ -151,7 +151,7 @@ class STC(Sharing):
         ----------
         m : torch.tensor
             Flattened model
-        
+
         Returns
         -------
         state_dict
@@ -233,7 +233,7 @@ class STC(Sharing):
         m : dict
             dict received
         return_flat_tensor : bool
-            Whether to return a flat tensor or a state_dict        
+            Whether to return a flat tensor or a state_dict
 
         Returns
         -------

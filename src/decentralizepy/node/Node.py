@@ -148,7 +148,13 @@ class Node:
         )
 
     def cache_fields(
-        self, rank, machine_id, mapping, graph, iterations, log_dir,
+        self,
+        rank,
+        machine_id,
+        mapping,
+        graph,
+        iterations,
+        log_dir,
     ):
         """
         Instantiate object field with arguments.
@@ -361,7 +367,12 @@ class Node:
         self.init_log(log_dir, rank, log_level)
 
         self.cache_fields(
-            rank, machine_id, mapping, graph, iterations, log_dir,
+            rank,
+            machine_id,
+            mapping,
+            graph,
+            iterations,
+            log_dir,
         )
         self.init_dataset_model(config["DATASET"])
         self.init_optimizer(config["OPTIMIZER_PARAMS"])

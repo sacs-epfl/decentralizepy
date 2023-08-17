@@ -39,7 +39,8 @@ class CIFAR10(Dataset):
         if self.__validating__ and self.validation_source == "Train":
             logging.info("Extracting the validation set from the train set.")
             self.validationset, trainset = torch.utils.data.random_split(
-                trainset, [self.validation_size, 1-self.validation_size],
+                trainset,
+                [self.validation_size, 1 - self.validation_size],
                 torch.Generator().manual_seed(self.random_seed),
             )
 
@@ -104,8 +105,9 @@ class CIFAR10(Dataset):
         if self.__validating__ and self.validation_source == "Test":
             logging.info("Extracting the validation set from the test set.")
             self.validationset, self.testset = torch.utils.data.random_split(
-                self.testset, [self.validation_size, 1-self.validation_size],
-                torch.Generator().manual_seed(self.random_seed)
+                self.testset,
+                [self.validation_size, 1 - self.validation_size],
+                torch.Generator().manual_seed(self.random_seed),
             )
 
     def __init__(
@@ -193,7 +195,6 @@ class CIFAR10(Dataset):
 
         if self.__testing__:
             self.load_testset()
-
 
     def get_trainset(self, batch_size=1, shuffle=False):
         """

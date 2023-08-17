@@ -374,7 +374,11 @@ class PartialModel(Sharing):
         output_dict["tensor"] = v.tolist()
 
         with open(
-            os.path.join(s, "{}.json".format(self.communication_round + 1),), "w",
+            os.path.join(
+                s,
+                "{}.json".format(self.communication_round + 1),
+            ),
+            "w",
         ) as of:
             json.dump(output_dict, of)
 

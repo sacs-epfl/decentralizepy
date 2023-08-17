@@ -234,7 +234,7 @@ class DirichletDataPartitioner(DataPartitioner):
             Degree of heterogeneity. Lower is more heterogeneous.
         K : int
             Number of classes
-        
+
         """
 
         min_size = 0

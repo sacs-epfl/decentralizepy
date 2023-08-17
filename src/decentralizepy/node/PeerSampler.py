@@ -40,7 +40,13 @@ class PeerSampler(Node):
         )
 
     def cache_fields(
-        self, rank, machine_id, mapping, graph, iterations, log_dir,
+        self,
+        rank,
+        machine_id,
+        mapping,
+        graph,
+        iterations,
+        log_dir,
     ):
         """
         Instantiate object field with arguments.
@@ -151,7 +157,12 @@ class PeerSampler(Node):
         self.init_log(log_dir, log_level)
 
         self.cache_fields(
-            rank, machine_id, mapping, graph, iterations, log_dir,
+            rank,
+            machine_id,
+            mapping,
+            graph,
+            iterations,
+            log_dir,
         )
 
         self.init_dataset_model(config["DATASET"])
