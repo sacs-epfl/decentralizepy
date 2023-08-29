@@ -81,7 +81,7 @@ class STC(Sharing):
             compress,
             compression_package,
             compression_class,
-            float_precision
+            float_precision,
         )
         self.alpha = alpha
         self.dict_ordered = dict_ordered
@@ -119,7 +119,7 @@ class STC(Sharing):
             if "params" in data:
                 data["params"] = self.compressor.decompress_float(data["params"])
         return data
-    
+
     def flatten(self, m):
         """
         Method to flatten a torch model
@@ -135,14 +135,14 @@ class STC(Sharing):
             Flattened model
 
         """
-            
+
         with torch.no_grad():
             tensors_to_cat = []
             for _, v in m.items():
                 t = v.flatten()
                 tensors_to_cat.append(t)
             return torch.cat(tensors_to_cat, dim=0)
-    
+
     def unflatten(self, m):
         """
         Method to unflatten a torch model
@@ -151,7 +151,7 @@ class STC(Sharing):
         ----------
         m : torch.tensor
             Flattened model
-        
+
         Returns
         -------
         state_dict
@@ -233,7 +233,7 @@ class STC(Sharing):
         m : dict
             dict received
         return_flat_tensor : bool
-            Whether to return a flat tensor or a state_dict        
+            Whether to return a flat tensor or a state_dict
 
         Returns
         -------
@@ -268,7 +268,6 @@ class STC(Sharing):
             flattened_model = self.flatten(self.model.state_dict())
             self.model.model_change = flattened_model - self.prev_model + self.residuals
             self.prev_model = flattened_model
-            
 
     def _post_step(self):
         """
@@ -279,7 +278,7 @@ class STC(Sharing):
         with torch.no_grad():
             return
 
-    def process_received(self, m = None):
+    def process_received(self, m=None):
         """
         Process the received dict.
         Algorithm 2 of the paper: Lines 7-9.
@@ -309,11 +308,13 @@ class STC(Sharing):
     def get_data_to_send(self, *args, **kwargs):
         with torch.no_grad():
             self._pre_step()
-            data = self.serialized_model() # Algorithm 2 of the paper: Line 11
-            self.residuals = self.model.model_change - self.deserialized_model(data, return_flat_tensor=True) # Algorithm 2 of the paper: Line 12
+            data = self.serialized_model()  # Algorithm 2 of the paper: Line 11
+            self.residuals = self.model.model_change - self.deserialized_model(
+                data, return_flat_tensor=True
+            )  # Algorithm 2 of the paper: Line 12
             data["iteration"] = self.communication_round
             return data
-    
+
     def server_broadcast(self, *args, **kwargs):
         """
         Broadcast the model to all working nodes
@@ -322,11 +323,13 @@ class STC(Sharing):
         """
         with torch.no_grad():
             data = self.serialized_model()
-            self.residuals = self.model.model_change - self.deserialized_model(data, return_flat_tensor=True)
-            self.process_received(data) # A trick to reuse the code :)
+            self.residuals = self.model.model_change - self.deserialized_model(
+                data, return_flat_tensor=True
+            )
+            self.process_received(data)  # A trick to reuse the code :)
             data["iteration"] = self.communication_round
             return data
-    
+
     def _averaging_server(self, peer_deques):
         """
         Averages the received models of all working nodes

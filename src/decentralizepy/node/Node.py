@@ -205,7 +205,7 @@ class Node:
         torch.manual_seed(random_seed)
         self.dataset_params = utils.remove_keys(
             dataset_configs,
-            ["dataset_package", "dataset_class", "model_class", "random_seed"],
+            ["dataset_package", "dataset_class", "model_class"],
         )
         self.dataset = self.dataset_class(
             self.rank, self.machine_id, self.mapping, **self.dataset_params

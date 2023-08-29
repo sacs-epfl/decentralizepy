@@ -214,8 +214,10 @@ class DirichletDataPartitioner(DataPartitioner):
         self.seed = seed
         self.num_classes = num_classes
         self.alpha = alpha
-        self.partitions, self.ratio = self.__getDirichletData__(np.array(data.targets), len(sizes), seed, self.alpha, num_classes)
-    
+        self.partitions, self.ratio = self.__getDirichletData__(
+            np.array(data.targets), len(sizes), seed, self.alpha, num_classes
+        )
+
     def __getDirichletData__(self, labelList, n_nets, seed, alpha, K):
         """
         Function to partition the data using Dirichlet Function
@@ -232,13 +234,13 @@ class DirichletDataPartitioner(DataPartitioner):
             Degree of heterogeneity. Lower is more heterogeneous.
         K : int
             Number of classes
-        
+
         """
 
         min_size = 0
         N = len(labelList)
         rng = np.random.default_rng(seed)
-        
+
         net_dataidx_map = {}
         while min_size < K:
             idx_batch = [[] for _ in range(n_nets)]
@@ -248,16 +250,24 @@ class DirichletDataPartitioner(DataPartitioner):
                 rng.shuffle(idx_k)
                 proportions = rng.dirichlet(np.repeat(alpha, n_nets))
                 ## Balance
-                proportions = np.array([p*(len(idx_j)<N/n_nets) for p,idx_j in zip(proportions,idx_batch)])
-                proportions = proportions/proportions.sum()
-                proportions = (np.cumsum(proportions)*len(idx_k)).astype(int)[:-1]
-                idx_batch = [idx_j + idx.tolist() for idx_j,idx in zip(idx_batch,np.split(idx_k,proportions))]
+                proportions = np.array(
+                    [
+                        p * (len(idx_j) < N / n_nets)
+                        for p, idx_j in zip(proportions, idx_batch)
+                    ]
+                )
+                proportions = proportions / proportions.sum()
+                proportions = (np.cumsum(proportions) * len(idx_k)).astype(int)[:-1]
+                idx_batch = [
+                    idx_j + idx.tolist()
+                    for idx_j, idx in zip(idx_batch, np.split(idx_k, proportions))
+                ]
                 min_size = min([len(idx_j) for idx_j in idx_batch])
 
         for j in range(n_nets):
             rng.shuffle(idx_batch[j])
             net_dataidx_map[j] = idx_batch[j]
-            
+
         net_cls_counts = {}
 
         for net_i, dataidx in net_dataidx_map.items():
@@ -269,6 +279,6 @@ class DirichletDataPartitioner(DataPartitioner):
         for i in range(n_nets):
             local_sizes.append(len(net_dataidx_map[i]))
         local_sizes = np.array(local_sizes)
-        counts = local_sizes # return counts insteads of ratios
+        counts = local_sizes  # return counts insteads of ratios
 
         return idx_batch, counts
