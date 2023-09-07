@@ -141,14 +141,17 @@ class DPSGDWithPeerSampler(DPSGDNode):
         """
         if not self.sent_disconnections:
             logging.info("Disconnecting neighbors")
+
+            if self.peer_sampler_uid in self.barrier:
+                self.communication.send(
+                    self.peer_sampler_uid,
+                    {"BYE": self.uid, "CHANNEL": "SERVER_REQUEST"},
+                )
+                self.barrier.remove(self.peer_sampler_uid)
+
             for uid in self.barrier:
                 self.communication.send(uid, {"BYE": self.uid, "CHANNEL": "DISCONNECT"})
-            self.communication.send(
-                self.peer_sampler_uid, {"BYE": self.uid, "CHANNEL": "SERVER_REQUEST"}
-            )
             self.sent_disconnections = True
-
-            self.barrier.remove(self.peer_sampler_uid)
 
             while len(self.barrier):
                 sender, _ = self.receive_disconnect()
