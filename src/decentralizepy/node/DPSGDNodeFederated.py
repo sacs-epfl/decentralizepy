@@ -96,11 +96,6 @@ class DPSGDNodeFederated(Node):
 
             self.participated += 1
 
-        # only if has participated in learning
-        if self.participated > 0:
-            logging.info("Storing final weight")
-            self.model.dump_weights(self.weights_store_dir, self.uid, iteration)
-
         logging.info("Server disconnected. Process complete!")
 
     def cache_fields(
@@ -254,6 +249,35 @@ class DPSGDNodeFederated(Node):
         self.participated = 0
 
         self.init_sharing(config["SHARING"])
+
+    def init_dataset_model(self, dataset_configs):
+        """
+        Instantiate dataset and model from config.
+
+        Parameters
+        ----------
+        dataset_configs : dict
+            Python dict containing dataset config params
+
+        """
+        dataset_module = importlib.import_module(dataset_configs["dataset_package"])
+        self.dataset_class = getattr(dataset_module, dataset_configs["dataset_class"])
+        random_seed = (
+            dataset_configs["random_seed"] if "random_seed" in dataset_configs else 97
+        )
+        torch.manual_seed(random_seed)
+        self.dataset_params = utils.remove_keys(
+            dataset_configs,
+            ["dataset_package", "dataset_class", "model_class", "test_dir"],
+        )
+        self.dataset = self.dataset_class(
+            self.rank, self.machine_id, self.mapping, **self.dataset_params
+        )
+
+        logging.info("Dataset instantiation complete.")
+
+        self.model_class = getattr(dataset_module, dataset_configs["model_class"])
+        self.model = self.model_class()
 
     def __init__(
         self,

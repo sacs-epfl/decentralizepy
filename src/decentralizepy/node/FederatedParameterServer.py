@@ -6,6 +6,7 @@ import os
 import random
 from collections import deque
 
+import torch
 from matplotlib import pyplot as plt
 
 from decentralizepy import utils
@@ -219,6 +220,35 @@ class FederatedParameterServer(Node):
 
         self.init_sharing(config["SHARING"])
 
+    def init_dataset_model(self, dataset_configs):
+        """
+        Instantiate dataset and model from config.
+
+        Parameters
+        ----------
+        dataset_configs : dict
+            Python dict containing dataset config params
+
+        """
+        dataset_module = importlib.import_module(dataset_configs["dataset_package"])
+        self.dataset_class = getattr(dataset_module, dataset_configs["dataset_class"])
+        random_seed = (
+            dataset_configs["random_seed"] if "random_seed" in dataset_configs else 97
+        )
+        torch.manual_seed(random_seed)
+        self.dataset_params = utils.remove_keys(
+            dataset_configs,
+            ["dataset_package", "dataset_class", "model_class", "train_dir"],
+        )
+        self.dataset = self.dataset_class(
+            self.rank, self.machine_id, self.mapping, **self.dataset_params
+        )
+
+        logging.info("Dataset instantiation complete.")
+
+        self.model_class = getattr(dataset_module, dataset_configs["model_class"])
+        self.model = self.model_class()
+
     def received_from_all(self):
         """
         Check if all current workers have sent the current iteration
@@ -345,21 +375,6 @@ class FederatedParameterServer(Node):
                     iteration + 1
                 ] = self.communication.total_data
 
-            rounds_to_train_evaluate -= 1
-
-            if rounds_to_train_evaluate == 0:
-                logging.info("Evaluating on train set.")
-                rounds_to_train_evaluate = self.train_evaluate_after * change
-                loss_after_sharing = self.trainer.eval_loss(self.dataset)
-                results_dict["train_loss"][iteration + 1] = loss_after_sharing
-                self.save_plot(
-                    results_dict["train_loss"],
-                    "train_loss",
-                    "Training Loss",
-                    "Communication Rounds",
-                    os.path.join(self.log_dir, "{}_train_loss.png".format(self.rank)),
-                )
-
             rounds_to_test -= 1
 
             if self.dataset.__testing__ and rounds_to_test == 0:
@@ -378,16 +393,6 @@ class FederatedParameterServer(Node):
                 os.path.join(self.log_dir, "{}_results.json".format(self.rank)), "w"
             ) as of:
                 json.dump(results_dict, of)
-
-        if self.model.shared_parameters_counter is not None:
-            logging.info("Saving the shared parameter counts")
-            with open(
-                os.path.join(
-                    self.log_dir, "{}_shared_parameters.json".format(self.rank)
-                ),
-                "w",
-            ) as of:
-                json.dump(self.model.shared_parameters_counter.numpy().tolist(), of)
 
         self.disconnect_neighbors()
         logging.info("Storing final weight")
