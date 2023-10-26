@@ -1,5 +1,4 @@
 import logging
-from collections import deque
 
 from decentralizepy.graphs.Graph import Graph
 from decentralizepy.graphs.Regular import Regular
@@ -44,7 +43,6 @@ class PeerSamplerDynamic(PeerSampler):
         iterations=1,
         log_dir=".",
         log_level=logging.INFO,
-        graph_degree=5,
         *args
     ):
         """
@@ -87,7 +85,9 @@ class PeerSamplerDynamic(PeerSampler):
 
         self.iteration = -1
         self.graphs = []
-        self.graph_degree = graph_degree
+
+        nodeConfigs = config["NODE"]
+        self.graph_degree = nodeConfigs["graph_degree"]
 
         self.instantiate(
             rank,

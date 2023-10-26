@@ -108,7 +108,7 @@ class Sharing:
         flat = torch.cat(to_cat)
         data = dict()
         data["params"] = flat.numpy()
-        logging.info("Model sending this round: {}".format(data["params"]))
+        logging.debug("Model sending this round: {}".format(data["params"]))
         return self.compress_data(data)
 
     def deserialized_model(self, m):

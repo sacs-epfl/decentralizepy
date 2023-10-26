@@ -82,6 +82,35 @@ Cite us as ::
    series = {EuroMLSys '23}
    }
 
+-------------------------
+Built with DecentralizePy
+-------------------------
+
+.. _`Epidemic Learning`: https://arxiv.org/abs/2310.01972/
+
+`Epidemic Learning`_
+--------------------
+
+Tutorial
+    ``tutorial/EpidemicLearning``
+Source files
+    ``src/node/EpidemicLearning/``
+Cite
+    ``Martijn de Vos, Sadegh Farhadkhani, Rachid Guerraoui, Anne-Marie Kermarrec, Rafael Pires, and Rishi Sharma. Epidemic Learning: Boosting Decentralized Learning with Randomized Communication. In Thirty-seventh Conference on Neural Information Processing Systems (NeurIPS), 2023.``
+
+.. _`Get More for Less in Decentralized Learning Systems`: https://ieeexplore.ieee.org/document/10272515/
+
+`Get More for Less in Decentralized Learning Systems`_
+------------------------------------------------------
+
+Tutorial
+    ``tutorial/JWINS``
+Source files
+    ``src/sharing/JWINS/``
+Cite
+    ``Akash Dhasade, Anne-Marie Kermarrec, Rafael Pires, Rishi Sharma, Jeffrey Wigger, and Milos Vujasinovic. Get More for Less in Decentralized Learning Systems. In IEEE 43rd International Conference on Distributed Computing Systems (ICDCS), 2023.``
+
+
 ------------
 Contributing
 ------------
