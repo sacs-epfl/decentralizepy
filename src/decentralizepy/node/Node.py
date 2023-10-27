@@ -10,6 +10,7 @@ from decentralizepy import utils
 from decentralizepy.graphs.Graph import Graph
 from decentralizepy.mappings.Mapping import Mapping
 
+import numpy as np 
 
 class Node:
     """
@@ -203,6 +204,7 @@ class Node:
             dataset_configs["random_seed"] if "random_seed" in dataset_configs else 97
         )
         torch.manual_seed(random_seed)
+        np.random.seed(random_seed)
         self.dataset_params = utils.remove_keys(
             dataset_configs,
             ["dataset_package", "dataset_class", "model_class"],

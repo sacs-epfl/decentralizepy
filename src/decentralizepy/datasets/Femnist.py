@@ -150,6 +150,21 @@ class Femnist(Dataset):
         assert self.train_x.shape[0] == self.train_y.shape[0]
         assert self.train_x.shape[0] > 0
 
+        if self.__validating__ and self.validation_source == "Train":
+            num_samples = int(self.train_x.shape[0]*self.validation_size)
+            validation_indexes = np.random.choice(self.train_x.shape[0], num_samples, replace=False)
+
+            self.validation_x = self.train_x[validation_indexes]
+            self.validation_y = self.train_y[validation_indexes]
+
+            self.train_x = np.delete(self.train_x, validation_indexes, axis=0)
+            self.train_y = np.delete(self.train_y, validation_indexes, axis=0)
+
+            logging.info("train_x.shape after extracting the validation set: %s", str(self.train_x.shape))
+            logging.info("train_y.shape after extracting the validation set: %s", str(self.train_y.shape)) 
+            logging.info("validation_x.shape: %s", str(self.validation_x.shape))
+            logging.info("validation_y.shape: %s", str(self.validation_y.shape))
+
     def load_testset(self):
         """
         Loads the testing set.
@@ -175,6 +190,24 @@ class Femnist(Dataset):
         assert self.test_x.shape[0] == self.test_y.shape[0]
         assert self.test_x.shape[0] > 0
 
+        if self.__validating__ and self.validation_source == "Test":
+            num_samples = int(self.test_x.shape[0]*self.validation_size)
+            validation_indexes = np.random.choice(self.test_x.shape[0], num_samples, replace=False)
+
+            self.validation_x = self.test_x[validation_indexes]
+            self.validation_y = self.test_y[validation_indexes]
+
+            self.test_x = np.delete(self.test_x, validation_indexes, axis=0)
+            self.test_y = np.delete(self.test_y, validation_indexes, axis=0)
+
+            logging.info("test_x.shape after extracting the validation set: %s", str(self.test_x.shape))
+            logging.info("test_y.shape after extracting the validation set: %s", str(self.test_y.shape)) 
+            logging.info("validation_x.shape: %s", str(self.validation_x.shape))
+            logging.info("validation_y.shape: %s", str(self.validation_y.shape))
+            logging.info("Fist 10 elements of validation_y: %s", str(self.validation_y[:10]))
+            logging.info("First 10 elements of test_y: %s", str(self.test_y[:10]))
+            logging.info("First 10 elements of train_y: %s", str(self.train_y[:10]))
+
     def __init__(
         self,
         rank: int,
@@ -186,6 +219,8 @@ class Femnist(Dataset):
         test_dir="",
         sizes="",
         test_batch_size=1024,
+        validation_source="",
+        validation_size="",
     ):
         """
         Constructor which reads the data files, instantiates and partitions the dataset
@@ -213,6 +248,10 @@ class Femnist(Dataset):
             By default, each process gets an equal amount.
         test_batch_size : int, optional
             Batch size during testing. Default value is 64
+         validation_source: string, optional
+            Source of validation set. One of 'Test', 'Train'
+        validation_size: int, optional
+            Fraction of the testset used as validation set
 
         """
         super().__init__(
@@ -225,6 +264,8 @@ class Femnist(Dataset):
             test_dir,
             sizes,
             test_batch_size,
+            validation_source,
+            validation_size
         )
 
         self.num_classes = NUM_CLASSES
@@ -234,8 +275,6 @@ class Femnist(Dataset):
 
         if self.__testing__:
             self.load_testset()
-
-        # TODO: Add Validation
 
     def get_client_ids(self):
         """
@@ -323,6 +362,13 @@ class Femnist(Dataset):
                 Data(self.test_x, self.test_y), batch_size=self.test_batch_size
             )
         raise RuntimeError("Test set not initialized!")
+    
+    def get_validationset(self):
+        if self.__validating__:
+            return DataLoader(
+                Data(self.validation_x, self.validation_y), batch_size=self.test_batch_size
+            )
+        raise RuntimeError("Validation set not initialized!")
 
     def test(self, model, loss):
         """
@@ -380,7 +426,63 @@ class Femnist(Dataset):
         loss_val = loss_val / count
         logging.info("Overall accuracy is: {:.1f} %".format(accuracy))
         return accuracy, loss_val
+    
+    def validate(self, model, loss):
+        """
+        Function to evaluate model on the validation dataset.
 
+        Parameters
+        ----------
+        model : decentralizepy.models.Model
+            Model to evaluate
+        loss : torch.nn.loss
+            Loss function to evaluate
+
+        Returns
+        -------
+        tuple(float, float)
+
+        """
+        model.eval()
+        validationloader = self.get_validationset()
+
+        logging.debug("Validation Loader instantiated.")
+
+        correct_pred = [0 for _ in range(NUM_CLASSES)]
+        total_pred = [0 for _ in range(NUM_CLASSES)]
+
+        total_correct = 0
+        total_predicted = 0
+
+        with torch.no_grad():
+            loss_val = 0.0
+            count = 0
+            for elems, labels in validationloader:
+                outputs = model(elems)
+                loss_val += loss(outputs, labels).item()
+                count += 1
+                _, predictions = torch.max(outputs, 1)
+                for label, prediction in zip(labels, predictions):
+                    logging.debug("{} predicted as {}".format(label, prediction))
+                    if label == prediction:
+                        correct_pred[label] += 1
+                        total_correct += 1
+                    total_pred[label] += 1
+                    total_predicted += 1
+
+        logging.debug("Predicted on the validation set")
+
+        for key, value in enumerate(correct_pred):
+            if total_pred[key] != 0:
+                accuracy = 100 * float(value) / total_pred[key]
+            else:
+                accuracy = 100.0
+            logging.debug("Accuracy for class {} is: {:.1f} %".format(key, accuracy))
+
+        accuracy = 100 * float(total_correct) / total_predicted
+        loss_val = loss_val / count
+        logging.info("Overall accuracy is: {:.1f} %".format(accuracy))
+        return accuracy, loss_val
 
 class LogisticRegression(Model):
     """
