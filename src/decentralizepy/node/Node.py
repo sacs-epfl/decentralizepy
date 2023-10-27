@@ -4,6 +4,7 @@ import math
 import os
 from collections import deque
 
+import numpy as np
 import torch
 
 from decentralizepy import utils
@@ -203,6 +204,7 @@ class Node:
             dataset_configs["random_seed"] if "random_seed" in dataset_configs else 97
         )
         torch.manual_seed(random_seed)
+        np.random.seed(random_seed)
         self.dataset_params = utils.remove_keys(
             dataset_configs,
             ["dataset_package", "dataset_class", "model_class"],
