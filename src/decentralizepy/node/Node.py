@@ -4,13 +4,13 @@ import math
 import os
 from collections import deque
 
+import numpy as np
 import torch
 
 from decentralizepy import utils
 from decentralizepy.graphs.Graph import Graph
 from decentralizepy.mappings.Mapping import Mapping
 
-import numpy as np 
 
 class Node:
     """

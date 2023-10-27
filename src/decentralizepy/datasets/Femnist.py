@@ -151,8 +151,10 @@ class Femnist(Dataset):
         assert self.train_x.shape[0] > 0
 
         if self.__validating__ and self.validation_source == "Train":
-            num_samples = int(self.train_x.shape[0]*self.validation_size)
-            validation_indexes = np.random.choice(self.train_x.shape[0], num_samples, replace=False)
+            num_samples = int(self.train_x.shape[0] * self.validation_size)
+            validation_indexes = np.random.choice(
+                self.train_x.shape[0], num_samples, replace=False
+            )
 
             self.validation_x = self.train_x[validation_indexes]
             self.validation_y = self.train_y[validation_indexes]
@@ -186,8 +188,10 @@ class Femnist(Dataset):
         assert self.test_x.shape[0] > 0
 
         if self.__validating__ and self.validation_source == "Test":
-            num_samples = int(self.test_x.shape[0]*self.validation_size)
-            validation_indexes = np.random.choice(self.test_x.shape[0], num_samples, replace=False)
+            num_samples = int(self.test_x.shape[0] * self.validation_size)
+            validation_indexes = np.random.choice(
+                self.test_x.shape[0], num_samples, replace=False
+            )
 
             self.validation_x = self.test_x[validation_indexes]
             self.validation_y = self.test_y[validation_indexes]
@@ -252,7 +256,7 @@ class Femnist(Dataset):
             sizes,
             test_batch_size,
             validation_source,
-            validation_size
+            validation_size,
         )
 
         self.num_classes = NUM_CLASSES
@@ -349,11 +353,12 @@ class Femnist(Dataset):
                 Data(self.test_x, self.test_y), batch_size=self.test_batch_size
             )
         raise RuntimeError("Test set not initialized!")
-    
+
     def get_validationset(self):
         if self.__validating__:
             return DataLoader(
-                Data(self.validation_x, self.validation_y), batch_size=self.test_batch_size
+                Data(self.validation_x, self.validation_y),
+                batch_size=self.test_batch_size,
             )
         raise RuntimeError("Validation set not initialized!")
 
@@ -413,7 +418,7 @@ class Femnist(Dataset):
         loss_val = loss_val / count
         logging.info("Overall accuracy is: {:.1f} %".format(accuracy))
         return accuracy, loss_val
-    
+
     def validate(self, model, loss):
         """
         Function to evaluate model on the validation dataset.
@@ -470,6 +475,7 @@ class Femnist(Dataset):
         loss_val = loss_val / count
         logging.info("Overall accuracy is: {:.1f} %".format(accuracy))
         return accuracy, loss_val
+
 
 class LogisticRegression(Model):
     """
