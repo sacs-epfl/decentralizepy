@@ -160,11 +160,6 @@ class Femnist(Dataset):
             self.train_x = np.delete(self.train_x, validation_indexes, axis=0)
             self.train_y = np.delete(self.train_y, validation_indexes, axis=0)
 
-            logging.info("train_x.shape after extracting the validation set: %s", str(self.train_x.shape))
-            logging.info("train_y.shape after extracting the validation set: %s", str(self.train_y.shape)) 
-            logging.info("validation_x.shape: %s", str(self.validation_x.shape))
-            logging.info("validation_y.shape: %s", str(self.validation_y.shape))
-
     def load_testset(self):
         """
         Loads the testing set.
@@ -199,14 +194,6 @@ class Femnist(Dataset):
 
             self.test_x = np.delete(self.test_x, validation_indexes, axis=0)
             self.test_y = np.delete(self.test_y, validation_indexes, axis=0)
-
-            logging.info("test_x.shape after extracting the validation set: %s", str(self.test_x.shape))
-            logging.info("test_y.shape after extracting the validation set: %s", str(self.test_y.shape)) 
-            logging.info("validation_x.shape: %s", str(self.validation_x.shape))
-            logging.info("validation_y.shape: %s", str(self.validation_y.shape))
-            logging.info("Fist 10 elements of validation_y: %s", str(self.validation_y[:10]))
-            logging.info("First 10 elements of test_y: %s", str(self.test_y[:10]))
-            logging.info("First 10 elements of train_y: %s", str(self.train_y[:10]))
 
     def __init__(
         self,
