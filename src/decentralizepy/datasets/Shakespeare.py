@@ -132,7 +132,9 @@ class Shakespeare(Dataset):
             self.sizes[-1] += 1.0 - frac * self.num_partitions
             logging.debug("Size fractions: {}".format(self.sizes))
 
-        my_clients = DataPartitioner(files, self.sizes).use(self.dataset_id)
+        my_clients = DataPartitioner(files, self.sizes, seed=self.random_seed).use(
+            self.dataset_id
+        )
         my_train_data = {"x": [], "y": []}
         self.clients = []
         self.num_samples = []

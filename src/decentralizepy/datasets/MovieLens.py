@@ -108,7 +108,7 @@ class MovieLens(Dataset):
         df_test = pd.DataFrame()
         for i in range(0, users_count):
             df_user = df_ratings[df_ratings["user_id"] == i + 1]
-            df_user_train = df_user.sample(frac=0.7)
+            df_user_train = df_user.sample(frac=0.7, random_state=self.random_seed)
             df_user_test = pd.concat([df_user, df_user_train]).drop_duplicates(
                 keep=False
             )
